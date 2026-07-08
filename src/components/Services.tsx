@@ -14,31 +14,31 @@ type Package = {
 
 const packages: Package[] = [
   {
-    name: 'Menu Photography', nameAr: 'تصوير المنيو',
-    price: '800', currency: 'AED',
-    description: 'Crafted for cafés updating their menu with images that make every dish irresistible.',
-    features: ['20 professional food photos', 'Professional lighting setup', 'High-resolution delivery', 'Basic retouching included'],
+    name: 'Starter', nameAr: 'المبتدئ',
+    price: '999', currency: 'AED',
+    description: 'The perfect starting point for brands ready to elevate their visual presence.',
+    features: ['15 professional photos', '2 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
-    name: 'Content Creation', nameAr: 'إنتاج المحتوى',
-    price: '1,200', currency: 'AED',
-    description: 'Our signature package — photography and cinematic video, crafted for brands that demand presence.',
-    features: ['15 professional food photos', '2 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
+    name: 'Growth', nameAr: 'النمو',
+    price: '1,799', currency: 'AED',
+    description: 'Our most popular package — impactful storytelling with more content for growing brands.',
+    features: ['30 professional photos', '4 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: true, custom: false,
   },
   {
-    name: 'Content Creation', nameAr: 'إنتاج المحتوى',
-    price: '1,800', currency: 'AED',
-    description: 'Our signature package — photography and cinematic video, crafted for brands that demand presence.',
-    features: ['25 professional food photos', '4 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
+    name: 'Premium', nameAr: 'بريميوم',
+    price: '2,999', currency: 'AED',
+    description: 'A comprehensive visual experience with extensive coverage and revision flexibility.',
+    features: ['50 professional photos', '6 cinematic videos / reels', '1 round of revisions', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
-    name: 'Videography', nameAr: 'تصوير فيديو',
-    price: '1,000', currency: 'AED',
-    description: 'Cinematic motion content that tells your brand story with depth and elegance.',
-    features: ['3 professional videos', 'Cinematic lighting & direction', 'Full post-production', 'Music & color grading'],
+    name: 'Monthly', nameAr: 'شهري',
+    price: '4,000', currency: 'AED',
+    description: 'Ongoing visual content with monthly site visits — ideal for consistent brand presence.',
+    features: ['2 site visits per month', '60-80 professional photos', '8 cinematic videos', '1 round of revisions', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
@@ -66,11 +66,11 @@ export default function Services() {
         >
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.55rem] tracking-[0.55em] text-[#c9a96e] uppercase">Investment</span>
+            <span className="font-sans text-[0.55rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Investment</span>
             <div className="w-6 h-px bg-[#c9a96e]" />
           </div>
-          <h2 className="font-serif text-5xl md:text-6xl text-[#f0ebe0] italic mb-3">Services &amp; Pricing</h2>
-          <p className="font-sans text-[0.68rem] text-[#756f68] tracking-[0.18em] uppercase">Cafés &amp; restaurants across UAE</p>
+          <h2 className="font-sans text-5xl md:text-6xl text-[#f0ebe0] mb-3 font-bold">Services &amp; Pricing</h2>
+          <p className="font-sans text-[0.68rem] text-[#756f68] tracking-[0.18em] uppercase font-medium">Cafés &amp; restaurants across UAE</p>
           <div className="gold-rule mt-8" />
         </motion.div>
 
@@ -91,7 +91,7 @@ export default function Services() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.4 }}
-          className="font-sans text-[0.58rem] text-[#5f5850] tracking-[0.28em] uppercase text-center mt-16"
+          className="font-sans text-[0.58rem] text-[#5f5850] tracking-[0.28em] uppercase text-center mt-16 font-medium"
         >
           On-location across Abu Dhabi &amp; Dubai &nbsp;&middot;&nbsp; All sessions by appointment
         </motion.p>
@@ -132,34 +132,34 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
         {pkg.best && (
           <div className="flex items-center gap-2 mb-7">
             <div className="w-3 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.58rem] tracking-[0.32em] text-[#c9a96e] uppercase">Signature Package</span>
+            <span className="font-sans text-[0.58rem] tracking-[0.32em] text-[#c9a96e] uppercase font-medium">Most Popular</span>
           </div>
         )}
 
         <div className="mb-7">
-          <h3 className="font-serif text-2xl text-[#f0ebe0] leading-tight group-hover:text-white transition-colors duration-500">
+          <h3 className="font-sans text-2xl text-[#f0ebe0] leading-tight group-hover:text-white transition-colors duration-500 font-semibold">
             {pkg.name}
           </h3>
-          <p className="font-serif text-lg text-[#c9a96e] mt-2 text-right" dir="rtl">{pkg.nameAr}</p>
+          <p className="font-sans text-lg text-[#c9a96e] mt-2 text-right font-normal" dir="rtl">{pkg.nameAr}</p>
         </div>
 
         <div className="mb-7 pb-7 border-b border-[#161616] transition-colors duration-500">
           {pkg.custom ? (
             <>
-              <span className="font-serif text-3xl text-[#f0ebe0] italic">Bespoke</span>
-              <p className="font-sans text-[0.58rem] tracking-[0.24em] text-[#645d55] uppercase mt-2">Crafted to your vision</p>
+              <span className="font-sans text-3xl text-[#f0ebe0] font-bold">Bespoke</span>
+              <p className="font-sans text-[0.58rem] tracking-[0.24em] text-[#645d55] uppercase mt-2 font-medium">Crafted to your vision</p>
             </>
           ) : (
             <div className="flex items-end gap-2">
-              <span className={`font-serif text-5xl leading-none transition-colors duration-500 ${
+              <span className={`font-sans text-5xl leading-none transition-colors duration-500 font-bold ${
                 pkg.best ? 'text-[#c9a96e]' : 'text-[#9a8158] group-hover:text-[#c9a96e]'
               }`}>{pkg.price}</span>
-              <span className="font-sans text-[0.58rem] text-[#665e56] tracking-[0.22em] uppercase pb-1.5">{pkg.currency}</span>
+              <span className="font-sans text-[0.58rem] text-[#665e56] tracking-[0.22em] uppercase pb-1.5 font-medium">{pkg.currency}</span>
             </div>
           )}
         </div>
 
-        <p className="font-sans text-[0.82rem] text-[#8a837b] leading-[1.85] mb-7 group-hover:text-[#aaa199] transition-colors duration-500">
+        <p className="font-body text-[0.82rem] text-[#8a837b] leading-[1.85] mb-7 group-hover:text-[#aaa199] transition-colors duration-500 font-normal">
           {pkg.description}
         </p>
 
@@ -169,7 +169,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
               <div className={`w-3 h-px mt-[0.45rem] flex-shrink-0 transition-colors duration-500 ${
                 pkg.best ? 'bg-[#c9a96e70]' : 'bg-[#463a2b] group-hover:bg-[#c9a96e40]'
               }`} />
-              <span className="font-sans text-[0.78rem] text-[#837d76] leading-relaxed group-hover:text-[#aaa199] transition-colors duration-500">{f}</span>
+              <span className="font-body text-[0.76rem] text-[#837d76] leading-relaxed group-hover:text-[#aaa199] transition-colors duration-500 font-normal">{f}</span>
             </li>
           ))}
         </ul>
@@ -177,7 +177,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
         <a
           href={waLink(msg)}
           onClick={(e) => { e.preventDefault(); openWhatsApp(msg); }}
-          className={`text-center font-sans text-[0.62rem] tracking-[0.24em] uppercase py-4 transition-all duration-300 cursor-pointer ${
+          className={`text-center font-sans text-[0.62rem] tracking-[0.24em] uppercase py-4 transition-all duration-300 cursor-pointer font-medium ${
             pkg.best
               ? 'bg-[#c9a96e] text-black hover:bg-[#d4b47a]'
               : 'border border-[#2a261f] text-[#8d857c] hover:border-[#c9a96e40] hover:text-[#c9a96e]'
