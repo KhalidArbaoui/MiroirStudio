@@ -6,8 +6,8 @@ const WA_MSG = "Hello MIROIR Studio, I'd like to enquire about your services.";
 
 export default function Contact() {
   return (
-    <section id="contact" className="section-pad bg-[#060606] relative">
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e20] to-transparent" />
+    <section id="contact" className="section-pad bg-[#080604] relative">
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b20] to-transparent" />
       <div className="container-site">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -17,9 +17,9 @@ export default function Contact() {
           className="mb-16 text-center"
         >
           <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Contact</span>
-            <div className="w-6 h-px bg-[#c9a96e]" />
+            <div className="w-6 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#d4a84b] uppercase font-medium">Contact</span>
+            <div className="w-6 h-px bg-[#d4a84b]" />
           </div>
           <h2 className="font-sans text-5xl md:text-6xl text-[#f0ebe0] font-bold">Let's create together</h2>
           <div className="gold-rule mt-8" />
@@ -44,7 +44,7 @@ export default function Contact() {
             <a
               href={waLink(WA_MSG)}
               onClick={e => { e.preventDefault(); openWhatsApp(WA_MSG); }}
-              className="wa-pulse inline-flex items-center gap-2 bg-[#c9a96e] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 sm:px-12 py-5 hover:bg-[#d4b47a] transition-all duration-400 cursor-pointer font-medium"
+              className="wa-pulse inline-flex items-center gap-2 bg-[#d4a84b] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 sm:px-12 py-5 hover:bg-[#d4b47a] transition-all duration-400 cursor-pointer font-medium"
             >
               <Phone size={14} />
               Book via WhatsApp
@@ -69,10 +69,10 @@ export default function Contact() {
             <div
               key={item.label}
               onClick={item.onClick}
-              className={`flex flex-col items-center gap-3 py-7 px-4 border border-white/[0.06] hover:border-[#c9a96e]/20 transition-colors duration-400 ${item.onClick ? 'cursor-pointer' : ''}`}
+              className={`flex flex-col items-center gap-3 py-7 px-4 border border-white/[0.06] hover:border-[#d4a84b]/20 transition-colors duration-400 ${item.onClick ? 'cursor-pointer' : ''}`}
               style={{ background: 'rgba(255,255,255,0.008)' }}
             >
-              <span className="text-[#c9a96e]/50">{item.icon}</span>
+              <span className="text-[#d4a84b]/50">{item.icon}</span>
               <div className="text-center">
                 <p className="eyebrow text-white/30 text-[0.48rem] mb-1.5">{item.label}</p>
                 <p className="font-body text-[0.78rem] text-white/55 font-normal">{item.value}</p>

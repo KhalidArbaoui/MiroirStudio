@@ -52,9 +52,9 @@ const packages: Package[] = [
 
 export default function Services() {
   return (
-    <section id="services" className="section-pad bg-[#060606] relative overflow-hidden">
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e20] to-transparent" />
-      <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e20] to-transparent" />
+    <section id="services" className="section-pad bg-[#080604] relative overflow-hidden">
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b20] to-transparent" />
+      <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b20] to-transparent" />
 
       <div className="container-site">
         <motion.div
@@ -65,9 +65,9 @@ export default function Services() {
           className="mb-6 text-center"
         >
           <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.55rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Investment</span>
-            <div className="w-6 h-px bg-[#c9a96e]" />
+            <div className="w-6 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.55rem] tracking-[0.55em] text-[#d4a84b] uppercase font-medium">Investment</span>
+            <div className="w-6 h-px bg-[#d4a84b]" />
           </div>
           <h2 className="font-sans text-5xl md:text-6xl text-[#f0ebe0] mb-3 font-bold">Services &amp; Pricing</h2>
           <p className="font-sans text-[0.68rem] text-[#756f68] tracking-[0.18em] uppercase font-medium">Cafés &amp; restaurants across UAE</p>
@@ -116,8 +116,8 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
       <div
         className={`relative flex flex-col flex-1 p-8 lg:p-9 border transition-colors duration-500 ${
           pkg.best
-            ? 'border-[#c9a96e40] bg-[#0d0d0d]'
-            : 'border-[#24201a] bg-[#0a0a0a] hover:border-[#c9a96e30]'
+            ? 'border-[#d4a84b40] bg-[#0d0d0d]'
+            : 'border-[#24201a] bg-[#0c0a08] hover:border-[#d4a84b30]'
         }`}
         style={{
           boxShadow: pkg.best
@@ -126,13 +126,13 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
         }}
       >
         {pkg.best && (
-          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e] to-transparent" />
+          <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b] to-transparent" />
         )}
 
         {pkg.best && (
           <div className="flex items-center gap-2 mb-7">
-            <div className="w-3 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.58rem] tracking-[0.32em] text-[#c9a96e] uppercase font-medium">Most Popular</span>
+            <div className="w-3 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.58rem] tracking-[0.32em] text-[#d4a84b] uppercase font-medium">Most Popular</span>
           </div>
         )}
 
@@ -140,7 +140,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
           <h3 className="font-sans text-2xl text-[#f0ebe0] leading-tight group-hover:text-white transition-colors duration-500 font-semibold">
             {pkg.name}
           </h3>
-          <p className="font-sans text-lg text-[#c9a96e] mt-2 text-right font-normal" dir="rtl">{pkg.nameAr}</p>
+          <p className="font-sans text-lg text-[#d4a84b] mt-2 text-right font-normal" dir="rtl">{pkg.nameAr}</p>
         </div>
 
         <div className="mb-7 pb-7 border-b border-[#161616] transition-colors duration-500">
@@ -152,7 +152,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
           ) : (
             <div className="flex items-end gap-2">
               <span className={`font-sans text-5xl leading-none transition-colors duration-500 font-bold ${
-                pkg.best ? 'text-[#c9a96e]' : 'text-[#9a8158] group-hover:text-[#c9a96e]'
+                pkg.best ? 'text-[#d4a84b]' : 'text-[#9a8158] group-hover:text-[#d4a84b]'
               }`}>{pkg.price}</span>
               <span className="font-sans text-[0.58rem] text-[#665e56] tracking-[0.22em] uppercase pb-1.5 font-medium">{pkg.currency}</span>
             </div>
@@ -167,7 +167,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
           {pkg.features.map((f) => (
             <li key={f} className="flex items-start gap-3.5">
               <div className={`w-3 h-px mt-[0.45rem] flex-shrink-0 transition-colors duration-500 ${
-                pkg.best ? 'bg-[#c9a96e70]' : 'bg-[#463a2b] group-hover:bg-[#c9a96e40]'
+                pkg.best ? 'bg-[#d4a84b70]' : 'bg-[#463a2b] group-hover:bg-[#d4a84b40]'
               }`} />
               <span className="font-body text-[0.76rem] text-[#837d76] leading-relaxed group-hover:text-[#aaa199] transition-colors duration-500 font-normal">{f}</span>
             </li>
@@ -179,15 +179,15 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
           onClick={(e) => { e.preventDefault(); openWhatsApp(msg); }}
           className={`text-center font-sans text-[0.62rem] tracking-[0.24em] uppercase py-4 transition-all duration-300 cursor-pointer font-medium ${
             pkg.best
-              ? 'bg-[#c9a96e] text-black hover:bg-[#d4b47a]'
-              : 'border border-[#2a261f] text-[#8d857c] hover:border-[#c9a96e40] hover:text-[#c9a96e]'
+              ? 'bg-[#d4a84b] text-black hover:bg-[#d4b47a]'
+              : 'border border-[#2a261f] text-[#8d857c] hover:border-[#d4a84b40] hover:text-[#d4a84b]'
           }`}
         >
           {pkg.custom ? 'Discuss Your Project' : 'Enquire Now'}
         </a>
 
         {pkg.best && (
-          <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e30] to-transparent" />
+          <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b30] to-transparent" />
         )}
       </div>
     </motion.div>

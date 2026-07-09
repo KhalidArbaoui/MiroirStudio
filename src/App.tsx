@@ -60,7 +60,7 @@ export default function App() {
 
   if (page === 'gallery' && category) {
     return (
-      <div className="bg-[#080808] min-h-screen">
+      <div className="bg-[#0a0806] min-h-screen">
         <Navbar onNavClick={handleNavClick} currentPage={page} selectedCategory={selectedCategory} />
         <GalleryPage category={category} onBack={navigateToHome} />
         <Footer />
@@ -69,7 +69,7 @@ export default function App() {
   }
 
   return (
-    <div className="bg-[#080808] min-h-screen">
+    <div className="bg-[#0a0806] min-h-screen">
       <Navbar onNavClick={handleNavClick} currentPage={page} />
       <Hero />
       <Portfolio onSelectCategory={navigateToGallery} />

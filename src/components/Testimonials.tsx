@@ -20,8 +20,8 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="section-pad bg-[#060606] relative">
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e]/8 to-transparent" />
+    <section className="section-pad bg-[#080604] relative">
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b]/8 to-transparent" />
       <div className="container-site">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -31,9 +31,9 @@ export default function Testimonials() {
           className="mb-16 text-center"
         >
           <div className="flex items-center justify-center gap-4 mb-5">
-            <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#c9a96e] uppercase">Testimonials</span>
-            <div className="w-6 h-px bg-[#c9a96e]" />
+            <div className="w-6 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#d4a84b] uppercase">Testimonials</span>
+            <div className="w-6 h-px bg-[#d4a84b]" />
           </div>
           <h2 className="font-serif text-5xl md:text-6xl text-[#f0ebe0] italic">What clients say</h2>
           <div className="gold-rule mt-8" />
@@ -47,13 +47,13 @@ export default function Testimonials() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: i * 0.1 }}
-              className="flex flex-col p-8 lg:p-9 border border-white/[0.04] hover:border-[#c9a96e]/10 transition-colors duration-500"
+              className="flex flex-col p-8 lg:p-9 border border-white/[0.04] hover:border-[#d4a84b]/10 transition-colors duration-500"
               style={{ background: 'rgba(255,255,255,0.01)', boxShadow: '0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.015)' }}
             >
-              <div className="font-serif text-6xl leading-none text-[#c9a96e]/10 mb-5 select-none">&ldquo;</div>
+              <div className="font-serif text-6xl leading-none text-[#d4a84b]/10 mb-5 select-none">&ldquo;</div>
               <p className="font-sans text-[0.82rem] text-white/44 leading-[1.9] flex-1 italic">{t.text}</p>
               <div className="mt-9 pt-7 border-t border-white/[0.04]">
-                <p className="font-serif text-[1.08rem] text-[#c9a96e]/78">{t.author}</p>
+                <p className="font-serif text-[1.08rem] text-[#d4a84b]/78">{t.author}</p>
                 <p className="eyebrow text-white/30 text-[0.48rem] mt-1.5">{t.role}</p>
               </div>
             </motion.div>

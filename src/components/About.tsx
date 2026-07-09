@@ -4,7 +4,7 @@ const values = ['Precision', 'Storytelling', 'Elegance', 'Excellence'];
 
 export default function About() {
   return (
-    <section id="about" className="bg-[#060606] overflow-hidden">
+    <section id="about" className="bg-[#080604] overflow-hidden">
       <motion.div
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
@@ -20,8 +20,8 @@ export default function About() {
           style={{ transform: 'scale(1.04)', transition: 'transform 2s ease-out' }}
           onLoad={e => { (e.target as HTMLImageElement).style.transform = 'scale(1.0)'; }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#060606]/20 via-transparent to-[#060606]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#060606]/50 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#080604]/20 via-transparent to-[#080604]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#080604]/50 via-transparent to-transparent" />
 
         <div className="absolute bottom-0 inset-x-0 container-site pb-12">
           <motion.div
@@ -32,13 +32,13 @@ export default function About() {
             className="text-center"
           >
             <div className="flex items-center justify-center gap-4 mb-4">
-              <div className="w-6 h-px bg-[#c9a96e60]" />
-              <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Our Story</span>
-              <div className="w-6 h-px bg-[#c9a96e60]" />
+              <div className="w-6 h-px bg-[#d4a84b60]" />
+              <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#d4a84b] uppercase font-medium">Our Story</span>
+              <div className="w-6 h-px bg-[#d4a84b60]" />
             </div>
             <h2 className="font-sans text-5xl md:text-6xl lg:text-7xl text-[#f0ebe0] font-bold leading-[1.05]">
               Where vision<br />
-              <span className="text-[#c9a96e]">meets craft</span>
+              <span className="text-[#d4a84b]">meets craft</span>
             </h2>
           </motion.div>
         </div>
@@ -73,13 +73,13 @@ export default function About() {
             <div className="grid grid-cols-2 gap-x-8 gap-y-5 mb-14">
               {values.map(v => (
                 <div key={v} className="flex items-center gap-3">
-                  <div className="w-3 h-px bg-[#c9a96e]/25" />
+                  <div className="w-3 h-px bg-[#d4a84b]/25" />
                   <span className="eyebrow text-white/34">{v}</span>
                 </div>
               ))}
             </div>
             <div className="gold-rule mb-10" />
-            <p className="font-sans text-2xl md:text-3xl text-white/68 italic leading-snug">
+            <p className="font-serif text-2xl md:text-3xl text-white/68 italic leading-snug">
               Your brand deserves visuals<br />that stop the scroll.
             </p>
           </motion.div>

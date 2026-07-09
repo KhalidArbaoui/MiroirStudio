@@ -20,7 +20,7 @@
 html { scroll-behavior: smooth; }
 section[id] { scroll-margin-top: 4.5rem; }
 body {
-  background-color: #080808;
+  background-color: #0a0806;
   color: #e8e2d6;
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 400;
@@ -28,6 +28,18 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+  pointer-events: none;
 }
 
 .font-monea { font-family: 'Monea', 'Cormorant Garamond', Georgia, serif; }
@@ -54,7 +66,7 @@ body {
   font-size: 0.52rem;
   letter-spacing: 0.5em;
   text-transform: uppercase;
-  color: #c9a96e;
+  color: #d4a84b;
 }
 
 .gold-rule {
@@ -80,7 +92,7 @@ body {
 .wa-pulse { animation: waPulse 3.5s ease infinite; }
 
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #080808; }
+::-webkit-scrollbar-track { background: #0a0806; }
 ::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(201,169,110,0.5); }
 

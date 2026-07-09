@@ -9,8 +9,8 @@ const brands = [
 
 export default function Brands() {
   return (
-    <section className="section-pad bg-[#060606] relative">
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#c9a96e]/8 to-transparent" />
+    <section className="section-pad bg-[#080604] relative">
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b]/8 to-transparent" />
       <div className="container-site">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -20,9 +20,9 @@ export default function Brands() {
           className="mb-16 text-center"
         >
           <div className="flex items-center justify-center gap-4 mb-5">
-            <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Partners</span>
-            <div className="w-6 h-px bg-[#c9a96e]" />
+            <div className="w-6 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#d4a84b] uppercase font-medium">Partners</span>
+            <div className="w-6 h-px bg-[#d4a84b]" />
           </div>
           <h2 className="font-sans text-5xl md:text-6xl text-[#f0ebe0] font-bold">Brands we work with</h2>
           <div className="gold-rule mt-8" />
@@ -36,7 +36,7 @@ export default function Brands() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: i * 0.1 }}
-              className="flex items-center justify-center p-6 md:p-8 group bg-white/[0.03] border border-white/[0.04] hover:border-[#c9a96e]/10 rounded-sm transition-colors duration-500"
+              className="flex items-center justify-center p-6 md:p-8 group bg-white/[0.03] border border-white/[0.04] hover:border-[#d4a84b]/10 rounded-sm transition-colors duration-500"
             >
               <img
                 src={b.logo}

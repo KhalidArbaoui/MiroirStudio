@@ -17,7 +17,7 @@ function CategoryCard({ category, index, onClick }: { category: Category; index:
       viewport={{ once: true }}
       transition={{ duration: 0.7, delay: index * 0.1, ease: [0.22, 1, 0.36, 1] }}
       onClick={() => onClick(category.id)}
-      className="group w-full cursor-pointer border-0 p-0 text-left focus:outline-none bg-[#0a0a0a]"
+      className="group w-full cursor-pointer border-0 p-0 text-left focus:outline-none bg-[#0c0a08]"
     >
       <div className="relative w-full overflow-hidden aspect-[4/5]">
         <img
@@ -29,11 +29,11 @@ function CategoryCard({ category, index, onClick }: { category: Category; index:
 
         {isVideo && (
           <>
-            <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-[#080808]/70 to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 inset-x-0 h-[15%] bg-gradient-to-t from-[#080808]/70 to-transparent pointer-events-none" />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e]/20 via-transparent to-[#0a0a0a]/30 mix-blend-overlay pointer-events-none" />
+            <div className="absolute top-0 inset-x-0 h-[15%] bg-gradient-to-b from-[#0a0806]/70 to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 inset-x-0 h-[15%] bg-gradient-to-t from-[#0a0806]/70 to-transparent pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1a1a2e]/20 via-transparent to-[#0c0a08]/30 mix-blend-overlay pointer-events-none" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#c9a96e]/90 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 shadow-2xl shadow-[#c9a96e]/30">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#d4a84b]/90 flex items-center justify-center transition-transform duration-500 group-hover:scale-110 shadow-2xl shadow-[#d4a84b]/30">
                 <Play size={28} className="text-black ml-1 fill-black" />
               </div>
             </div>
@@ -53,21 +53,21 @@ function CategoryCard({ category, index, onClick }: { category: Category; index:
           </>
         )}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[#080808]/90 via-[#080808]/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0806]/90 via-[#0a0806]/10 to-transparent" />
         <div className="absolute inset-0 shadow-[inset_0_0_0_0_rgba(201,169,110,0)] group-hover:shadow-[inset_0_0_0_1px_rgba(201,169,110,0.25)] transition-all duration-500" />
       </div>
 
       <div className="p-4 sm:p-5 text-left">
-        <h3 className="font-sans text-lg sm:text-xl text-white group-hover:text-[#c9a96e] transition-colors duration-300 leading-tight font-semibold">
+        <h3 className="font-sans text-lg sm:text-xl text-white group-hover:text-[#d4a84b] transition-colors duration-300 leading-tight font-semibold">
           {category.title}
         </h3>
         {isVideo ? (
-          <span className="inline-flex items-center gap-1.5 mt-2 font-sans text-[0.45rem] tracking-[0.32em] uppercase text-[#c9a96e]/60 font-medium">
-            <Play size={9} className="fill-[#c9a96e]/60" />
+          <span className="inline-flex items-center gap-1.5 mt-2 font-sans text-[0.45rem] tracking-[0.32em] uppercase text-[#d4a84b]/60 font-medium">
+            <Play size={9} className="fill-[#d4a84b]/60" />
             Watch Reels &rarr;
           </span>
         ) : (
-          <span className="inline-block mt-2 font-sans text-[0.45rem] tracking-[0.32em] uppercase text-[#c9a96e]/60 font-medium">
+          <span className="inline-block mt-2 font-sans text-[0.45rem] tracking-[0.32em] uppercase text-[#d4a84b]/60 font-medium">
             View Gallery &rarr;
           </span>
         )}
@@ -78,7 +78,7 @@ function CategoryCard({ category, index, onClick }: { category: Category; index:
 
 export default function Portfolio({ onSelectCategory }: { onSelectCategory: (id: string) => void }) {
   return (
-    <section id="portfolio" className="bg-[#080808] section-pad">
+    <section id="portfolio" className="bg-[#0a0806] section-pad">
       <div className="container-site">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -88,9 +88,9 @@ export default function Portfolio({ onSelectCategory }: { onSelectCategory: (id:
           className="mb-16 text-center"
         >
           <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="w-6 h-px bg-[#c9a96e]" />
-            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#c9a96e] uppercase font-medium">Our Work</span>
-            <div className="w-6 h-px bg-[#c9a96e]" />
+            <div className="w-6 h-px bg-[#d4a84b]" />
+            <span className="font-sans text-[0.52rem] tracking-[0.55em] text-[#d4a84b] uppercase font-medium">Our Work</span>
+            <div className="w-6 h-px bg-[#d4a84b]" />
           </div>
           <h2 className="font-sans text-5xl md:text-6xl text-[#f0ebe0] font-bold">Browse by Category</h2>
           <div className="gold-rule mt-8" />
@@ -115,7 +115,7 @@ export default function Portfolio({ onSelectCategory }: { onSelectCategory: (id:
           <a
             href={waLink(WA_MSG)}
             onClick={(e) => { e.preventDefault(); openWhatsApp(WA_MSG); }}
-            className="wa-pulse inline-block bg-[#c9a96e] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 sm:px-12 py-4 hover:bg-[#d4b47a] transition-all duration-300 font-medium"
+            className="wa-pulse inline-block bg-[#d4a84b] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 sm:px-12 py-4 hover:bg-[#d4b47a] transition-all duration-300 font-medium"
           >
             Get in Touch
           </a>
