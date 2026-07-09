@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { openWhatsApp, waLink } from '../lib/whatsapp';
+import { categories } from '../data/galleryData';
+
+const WA_MSG = "Hello MIROIR Studio, I'd like to book a session.";
 
 const links = [
   { label: 'Home',      href: '#home' },
@@ -11,9 +14,13 @@ const links = [
   { label: 'Contact',   href: '#contact' },
 ];
 
-const WA_MSG = "Hello MIROIR Studio, I'd like to book a session.";
+interface NavbarProps {
+  onNavClick: (target: string) => void;
+  currentPage: 'home' | 'gallery';
+  selectedCategory?: string | null;
+}
 
-export default function Navbar() {
+export default function Navbar({ onNavClick, currentPage, selectedCategory }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -35,33 +42,46 @@ export default function Navbar() {
             : 'bg-transparent'
         }`}
       >
-        <div className="container-site flex items-center justify-between h-14">
-          <a href="#home" className="flex flex-col leading-none group">
-            <span className="font-monea text-[1.3rem] tracking-[0.28em] text-[#c9a96e] group-hover:opacity-80 transition-opacity duration-300">
+        <div className="container-site flex items-center justify-between h-16">
+          <button onClick={() => onNavClick('home')} className="flex flex-col leading-none group bg-transparent border-none cursor-pointer">
+            <span className="font-monea text-[1.6rem] tracking-[0.28em] text-[#c9a96e] group-hover:opacity-80 transition-opacity duration-300">
               MIROIR
             </span>
-            <span className="font-sans text-[0.45rem] tracking-[0.5em] text-[#555] uppercase mt-0.5">
+            <span className="font-nav text-[0.52rem] tracking-[0.5em] text-[#555] uppercase mt-0.5 font-medium">
               Studio
             </span>
-          </a>
+          </button>
 
-          <div className="hidden md:flex items-center gap-10">
-            {links.map(l => (
-              <a
-                key={l.label}
-                href={l.href}
-                className="font-sans text-[0.62rem] tracking-[0.22em] uppercase text-[#aaaaaa] hover:text-[#c9a96e] transition-colors duration-300"
-              >
-                {l.label}
-              </a>
-            ))}
-          </div>
+          {currentPage === 'gallery' && (
+            <button
+              onClick={() => onNavClick('home')}
+              className="hidden md:inline-flex items-center gap-1.5 font-nav text-[0.63rem] tracking-[0.3em] uppercase text-white/40 hover:text-[#c9a96e] transition-colors duration-300 bg-transparent border-none cursor-pointer font-medium"
+            >
+              <ChevronLeft size={13} />
+              All Categories
+            </button>
+          )}
+
+          {currentPage === 'home' && (
+            <div className="hidden md:flex items-center gap-12">
+              {links.map(l => (
+                <button
+                  key={l.label}
+                  onClick={() => onNavClick(l.label.toLowerCase() === 'home' ? 'home' : l.href.replace('#', ''))}
+                  className="relative font-nav text-[0.72rem] tracking-[0.24em] uppercase text-[#aaaaaa] hover:text-[#c9a96e] transition-colors duration-300 bg-transparent border-none cursor-pointer font-medium py-1.5 group"
+                >
+                  {l.label}
+                  <span className="absolute -bottom-px left-1/2 -translate-x-1/2 w-0 h-px bg-[#c9a96e] transition-all duration-300 group-hover:w-full" />
+                </button>
+              ))}
+            </div>
+          )}
 
           <a
             href={waLink(WA_MSG)}
             onClick={e => { e.preventDefault(); openWhatsApp(WA_MSG); }}
-            className="hidden md:inline-flex items-center border border-[#c9a96e50] text-[#c9a96e] px-5 py-2
-              font-sans text-[0.58rem] tracking-[0.28em] uppercase
+            className="hidden md:inline-flex items-center border border-[#c9a96e50] text-[#c9a96e] px-8 py-2.5
+              font-nav text-[0.65rem] tracking-[0.28em] uppercase font-medium
               hover:bg-[#c9a96e] hover:text-black hover:border-[#c9a96e]
               transition-all duration-300 cursor-pointer"
           >
@@ -87,18 +107,40 @@ export default function Navbar() {
             transition={{ duration: 0.35 }}
             className="fixed inset-0 z-40 bg-[#050505] flex flex-col items-center justify-center gap-9"
           >
-            {links.map((l, i) => (
-              <motion.a
+            {currentPage === 'gallery' && (
+              <motion.button
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0 }}
+                onClick={() => { onNavClick('home'); setMenuOpen(false); }}
+                className="font-nav text-2xl text-[#c9a96e]/60 hover:text-[#c9a96e] transition-colors tracking-wide bg-transparent border-none cursor-pointer font-semibold"
+              >
+                &larr; All Categories
+              </motion.button>
+            )}
+            {currentPage === 'home' && links.map((l, i) => (
+              <motion.button
                 key={l.label}
-                href={l.href}
                 initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
-                onClick={() => setMenuOpen(false)}
-                className="font-serif text-4xl italic text-[#f0ebe0] hover:text-[#c9a96e] transition-colors tracking-wide"
+                onClick={() => { onNavClick(l.label.toLowerCase() === 'home' ? 'home' : l.href.replace('#', '')); setMenuOpen(false); }}
+                className="font-nav text-2xl text-[#f0ebe0] hover:text-[#c9a96e] transition-colors tracking-wide bg-transparent border-none cursor-pointer font-semibold"
               >
                 {l.label}
-              </motion.a>
+              </motion.button>
+            ))}
+            {currentPage === 'home' && categories.map((cat, i) => (
+              <motion.button
+                key={cat.id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (links.length + i) * 0.05 }}
+                onClick={() => { onNavClick(cat.id); setMenuOpen(false); }}
+                className="font-nav text-[0.68rem] tracking-[0.28em] uppercase text-white/40 hover:text-[#c9a96e] transition-colors bg-transparent border-none cursor-pointer font-medium"
+              >
+                {cat.title}
+              </motion.button>
             ))}
             <div className="w-8 h-px bg-[#c9a96e20] my-1" />
             <motion.a
@@ -108,7 +150,7 @@ export default function Navbar() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="border border-[#c9a96e50] text-[#c9a96e] px-10 py-3.5
-                font-sans text-[0.6rem] tracking-[0.3em] uppercase cursor-pointer
+                font-nav text-[0.68rem] tracking-[0.3em] uppercase cursor-pointer font-medium
                 hover:bg-[#c9a96e] hover:text-black transition-all duration-300"
             >
               Book via WhatsApp

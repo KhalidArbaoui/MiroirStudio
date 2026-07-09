@@ -6,10 +6,13 @@ const WA_MSG = "Hello MIROIR Studio, I'd like to book a session.";
 
 export default function Hero() {
   return (
-    <section id="home" className="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0">
+    <section id="home" className="relative h-screen min-h-[700px] flex items-center justify-center overflow-hidden bg-[#080808]">
+      <div className="absolute inset-0" style={{
+        maskImage: 'linear-gradient(to bottom, black 0%, black 55%, transparent 100%)',
+        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 55%, transparent 100%)',
+      }}>
         <img
-          src="/images/hero-dish.jpg"
+          src="./images/hero-dish.jpg"
           alt="Luxury plated dish - MIROIR Studio food photography"
           className="w-full h-full object-cover object-center"
           fetchPriority="high"
@@ -26,7 +29,7 @@ export default function Hero() {
           className="flex items-center justify-center gap-4 mb-8"
         >
           <div className="w-10 h-px bg-[#c9a96e60]" />
-          <span className="font-sans text-[0.52rem] tracking-[0.6em] text-[#c9a96e] uppercase">Abu Dhabi · Dubai, UAE</span>
+          <span className="font-sans text-[0.52rem] tracking-[0.6em] text-[#c9a96e] uppercase font-medium">Abu Dhabi · Dubai, UAE</span>
           <div className="w-10 h-px bg-[#c9a96e60]" />
         </motion.div>
 
@@ -58,13 +61,13 @@ export default function Hero() {
           <a
             href={waLink(WA_MSG)}
             onClick={e => { e.preventDefault(); openWhatsApp(WA_MSG); }}
-            className="wa-pulse min-w-[220px] bg-[#c9a96e] text-black font-sans text-[0.64rem] tracking-[0.24em] uppercase px-8 sm:px-10 py-4 hover:bg-[#d4b47a] transition-all duration-300 cursor-pointer"
+            className="wa-pulse min-w-[220px] bg-[#c9a96e] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-8 sm:px-10 py-4 hover:bg-[#d4b47a] transition-all duration-300 cursor-pointer font-medium"
           >
             Book via WhatsApp
           </a>
           <a
             href="#portfolio"
-            className="min-w-[220px] border border-[#555] text-[#c8c0b7] font-sans text-[0.64rem] tracking-[0.24em] uppercase px-8 sm:px-10 py-4 hover:border-[#c9a96e] hover:text-[#c9a96e] transition-all duration-300"
+            className="min-w-[220px] border border-[#555] text-[#c8c0b7] font-sans text-[0.62rem] tracking-[0.24em] uppercase px-8 sm:px-10 py-4 hover:border-[#c9a96e] hover:text-[#c9a96e] transition-all duration-300"
           >
             View Portfolio
           </a>
