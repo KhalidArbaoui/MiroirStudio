@@ -82,7 +82,6 @@ export default function GalleryPage({ category, onBack }: { category: Category; 
                     muted
                     playsInline
                     preload="metadata"
-                    poster="./images/reels-cover.jpg"
                     className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/40 transition-all duration-500" />
@@ -128,7 +127,7 @@ export default function GalleryPage({ category, onBack }: { category: Category; 
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-500" />
                 </>
               )}
-              <div className="absolute inset-0 shadow-[inset_0_0_0_0_rgba(201,169,110,0)] group-hover:shadow-[inset_0_0_0_1px_rgba(201,169,110,0.3)] transition-all duration-500" />
+              <div className="absolute inset-0 shadow-[inset_0_0_0_0_rgba(212,168,75,0)] group-hover:shadow-[inset_0_0_0_1px_rgba(212,168,75,0.3)] transition-all duration-500" />
             </motion.div>
           ))}
         </div>
@@ -180,7 +179,6 @@ export default function GalleryPage({ category, onBack }: { category: Category; 
                   src={lightboxItem.src}
                   controls
                   autoPlay
-                  poster="./images/reels-cover.jpg"
                   className="max-h-[80vh] w-full object-contain"
                 />
               ) : (

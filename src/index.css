@@ -72,7 +72,7 @@ body::before {
 .gold-rule {
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201,169,110,0.2) 40%, rgba(201,169,110,0.2) 60%, transparent);
+  background: linear-gradient(90deg, transparent, #d4a84b33 40%, #d4a84b33 60%, transparent);
 }
 
 .nav-blur {
@@ -86,15 +86,15 @@ body::before {
 }
 
 @keyframes waPulse {
-  0%, 100% { box-shadow: 0 0 0 0    rgba(201,169,110,0.25); }
-  50%      { box-shadow: 0 0 0 12px rgba(201,169,110,0); }
+  0%, 100% { box-shadow: 0 0 0 0    #d4a84b40; }
+  50%      { box-shadow: 0 0 0 12px #d4a84b00; }
 }
 .wa-pulse { animation: waPulse 3.5s ease infinite; }
 
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: #0a0806; }
-::-webkit-scrollbar-thumb { background: rgba(201,169,110,0.2); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(201,169,110,0.5); }
+::-webkit-scrollbar-thumb { background: #d4a84b33; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #d4a84b80; }
 
 .port-img {
   transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -111,3 +111,4 @@ body::before {
     transition-duration: .01ms !important;
   }
 }
+

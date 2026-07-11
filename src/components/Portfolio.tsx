@@ -54,7 +54,7 @@ function CategoryCard({ category, index, onClick }: { category: Category; index:
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0806]/90 via-[#0a0806]/10 to-transparent" />
-        <div className="absolute inset-0 shadow-[inset_0_0_0_0_rgba(201,169,110,0)] group-hover:shadow-[inset_0_0_0_1px_rgba(201,169,110,0.25)] transition-all duration-500" />
+        <div className="absolute inset-0 shadow-[inset_0_0_0_0_rgba(212,168,75,0)] group-hover:shadow-[inset_0_0_0_1px_rgba(212,168,75,0.25)] transition-all duration-500" />
       </div>
 
       <div className="p-4 sm:p-5 text-left">

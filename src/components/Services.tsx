@@ -121,7 +121,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
         }`}
         style={{
           boxShadow: pkg.best
-            ? '0 0 0 1px rgba(201,169,110,0.1), 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,169,110,0.06)'
+            ? '0 0 0 1px rgba(212,168,75,0.1), 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(212,168,75,0.06)'
             : '0 14px 40px rgba(0,0,0,0.32)'
         }}
       >
