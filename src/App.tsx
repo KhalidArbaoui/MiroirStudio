@@ -9,6 +9,7 @@ import Brands from './components/Brands';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import GalleryPage from './components/GalleryPage';
+import FloatingContact from './components/FloatingContact';
 import { categories } from './data/galleryData';
 
 function scrollToSection(id: string) {
@@ -64,6 +65,7 @@ export default function App() {
         <Navbar onNavClick={handleNavClick} currentPage={page} selectedCategory={selectedCategory} />
         <GalleryPage category={category} onBack={navigateToHome} />
         <Footer />
+        <FloatingContact />
       </div>
     );
   }
@@ -79,6 +81,7 @@ export default function App() {
       <Brands />
       <Contact />
       <Footer />
+      <FloatingContact />
     </div>
   );
 }

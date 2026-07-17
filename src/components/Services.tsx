@@ -3,7 +3,6 @@ import { openWhatsApp, waLink } from '../lib/whatsapp';
 
 type Package = {
   name: string;
-  nameAr: string;
   price: string;
   currency: string;
   description: string;
@@ -14,35 +13,35 @@ type Package = {
 
 const packages: Package[] = [
   {
-    name: 'Starter', nameAr: 'المبتدئ',
+    name: 'Starter',
     price: '999', currency: 'AED',
     description: 'The perfect starting point for brands ready to elevate their visual presence.',
     features: ['15 professional photos', '2 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
-    name: 'Growth', nameAr: 'النمو',
+    name: 'Growth',
     price: '1,799', currency: 'AED',
     description: 'Our most popular package — impactful storytelling with more content for growing brands.',
     features: ['30 professional photos', '4 cinematic videos / reels', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: true, custom: false,
   },
   {
-    name: 'Premium', nameAr: 'بريميوم',
+    name: 'Premium',
     price: '2,999', currency: 'AED',
     description: 'A comprehensive visual experience with extensive coverage and revision flexibility.',
     features: ['50 professional photos', '6 cinematic videos / reels', '1 round of revisions', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
-    name: 'Monthly', nameAr: 'شهري',
+    name: 'Monthly',
     price: '4,000', currency: 'AED',
     description: 'Ongoing visual content with monthly site visits — ideal for consistent brand presence.',
     features: ['2 site visits per month', '60-80 professional photos', '8 cinematic videos', '1 round of revisions', 'Professional lighting setup', 'Full post-production editing', 'Social media optimized'],
     best: false, custom: false,
   },
   {
-    name: 'Customized Service', nameAr: 'خدمة مخصصة',
+    name: 'Customized Service',
     price: 'Bespoke', currency: '',
     description: "A fully tailored visual experience, designed around your brand's unique identity and goals.",
     features: ['Fully tailored to your needs', 'Flexible scope & delivery', 'Dedicated creative direction', 'Priority scheduling'],
@@ -140,7 +139,7 @@ function PricingCard({ pkg, index }: { pkg: Package; index: number }) {
           <h3 className="font-sans text-2xl text-[#f0ebe0] leading-tight group-hover:text-white transition-colors duration-500 font-semibold">
             {pkg.name}
           </h3>
-          <p className="font-sans text-lg text-[#d4a84b] mt-2 text-right font-normal" dir="rtl">{pkg.nameAr}</p>
+
         </div>
 
         <div className="mb-7 pb-7 border-b border-[#161616] transition-colors duration-500">

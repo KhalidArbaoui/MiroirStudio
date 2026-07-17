@@ -1,12 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { MouseEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ArrowLeft, ArrowRight, ChevronLeft } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, ChevronLeft, Home } from 'lucide-react';
 import type { Category } from '../data/galleryData';
 
 type LightboxItem = { index: number };
 
 export default function GalleryPage({ category, onBack }: { category: Category; onBack: () => void }) {
+  useEffect(() => {
+    const handler = (e: PopStateEvent) => { onBack(); };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, [onBack]);
   const [lightbox, setLightbox] = useState<LightboxItem | null>(null);
 
   const openLightbox = useCallback((index: number) => setLightbox({ index }), []);
@@ -53,9 +58,9 @@ export default function GalleryPage({ category, onBack }: { category: Category; 
         <div className="relative z-10 w-full px-6 lg:px-10 pb-8 max-w-7xl mx-auto">
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-1.5 font-sans text-[0.5rem] tracking-[0.3em] uppercase text-white/40 hover:text-[#d4a84b] transition-colors duration-300 mb-4 font-medium"
+            className="inline-flex items-center gap-1.5 font-sans text-[0.68rem] tracking-[0.3em] uppercase text-[#d4a84b]/60 hover:text-[#d4a84b] transition-colors duration-300 mb-4 font-medium"
           >
-            <ChevronLeft size={12} />
+            <ChevronLeft size={14} />
             All Categories
           </button>
           <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl text-white leading-tight font-bold">

@@ -55,7 +55,7 @@ export default function Navbar({ onNavClick, currentPage, selectedCategory }: Na
           {currentPage === 'gallery' && (
             <button
               onClick={() => onNavClick('home')}
-              className="hidden md:inline-flex items-center gap-1.5 font-nav text-[0.63rem] tracking-[0.3em] uppercase text-white/40 hover:text-[#d4a84b] transition-colors duration-300 bg-transparent border-none cursor-pointer font-medium"
+              className="hidden md:inline-flex items-center gap-1.5 font-nav text-[0.63rem] tracking-[0.3em] uppercase text-[#d4a84b]/60 hover:text-[#d4a84b] transition-colors duration-300 bg-transparent border-none cursor-pointer font-medium"
             >
               <ChevronLeft size={13} />
               All Categories
@@ -113,7 +113,7 @@ export default function Navbar({ onNavClick, currentPage, selectedCategory }: Na
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0 }}
                 onClick={() => { onNavClick('home'); setMenuOpen(false); }}
-                className="font-nav text-2xl text-[#d4a84b]/60 hover:text-[#d4a84b] transition-colors tracking-wide bg-transparent border-none cursor-pointer font-semibold"
+                className="font-nav text-2xl text-[#d4a84b] hover:text-[#d4a84b]/80 transition-colors tracking-wide bg-transparent border-none cursor-pointer font-semibold"
               >
                 &larr; All Categories
               </motion.button>
