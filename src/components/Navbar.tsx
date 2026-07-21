@@ -9,7 +9,6 @@ const WA_MSG = "Hello MIROIR Studio, I'd like to book a session.";
 const links = [
   { label: 'Home',      href: '#home' },
   { label: 'Portfolio', href: '#portfolio' },
-  { label: 'Services',  href: '#services' },
   { label: 'About',     href: '#about' },
   { label: 'Contact',   href: '#contact' },
 ];

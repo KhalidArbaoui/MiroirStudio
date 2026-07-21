@@ -3,7 +3,6 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Portfolio from './components/Portfolio';
 import VisualStrip from './components/VisualStrip';
-import Services from './components/Services';
 import About from './components/About';
 import Brands from './components/Brands';
 import Contact from './components/Contact';
@@ -41,7 +40,7 @@ export default function App() {
       setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
       return;
     }
-    const sectionIds = ['portfolio', 'services', 'about', 'contact'];
+    const sectionIds = ['portfolio', 'about', 'contact'];
     if (sectionIds.includes(target)) {
       if (page === 'gallery') {
         navigateToHome();
@@ -76,7 +75,6 @@ export default function App() {
       <Hero />
       <Portfolio onSelectCategory={navigateToGallery} />
       <VisualStrip />
-      <Services />
       <About />
       <Brands />
       <Contact />
