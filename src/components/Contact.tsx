@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, ArrowUpRight, Mail, MapPin, CheckCircle } from 'lucide-react';
+import { Send, ArrowUpRight, Mail, MapPin, CheckCircle, Loader2 } from 'lucide-react';
+
+const WEB3FORMS_KEY = 'b5801318-271f-4fcb-bb8d-9b0ece754e72';
 
 const SERVICES = [
   'Food Photography',
@@ -14,13 +16,24 @@ const SERVICES = [
 
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (window.location.search.includes('success=true')) {
-      setSubmitted(true);
-      window.history.replaceState({}, '', window.location.pathname);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSending(true);
+    const fd = new FormData(e.currentTarget);
+    fd.append('access_key', WEB3FORMS_KEY);
+    fd.append('subject', 'New Enquiry — MIROIR Studio');
+    fd.append('from_name', 'MIROIR Studio Website');
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) setSubmitted(true);
+    } catch {
+      alert('Something went wrong. Please try again.');
     }
-  }, []);
+    setSending(false);
+  };
 
   if (submitted) {
     return (
@@ -67,21 +80,13 @@ export default function Contact() {
         </motion.div>
 
         <motion.form
-          name="contact"
-          method="POST"
-          data-netlify="true"
-          data-netlify-honeypot="bot-field"
-          action="/?success=true"
+          onSubmit={handleSubmit}
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.15 }}
           className="max-w-xl mx-auto flex flex-col gap-5 mb-16"
         >
-          <input type="hidden" name="form-name" value="contact" />
-          <p className="hidden">
-            <label>Don't fill this out: <input name="bot-field" /></label>
-          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
@@ -142,10 +147,11 @@ export default function Contact() {
 
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 bg-[#d4a84b] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 py-4 hover:bg-[#d4b47a] transition-all duration-300 cursor-pointer font-medium mt-1"
+            disabled={sending}
+            className="inline-flex items-center justify-center gap-2 bg-[#d4a84b] text-black font-sans text-[0.62rem] tracking-[0.24em] uppercase px-10 py-4 hover:bg-[#d4b47a] transition-all duration-300 cursor-pointer font-medium mt-1 disabled:opacity-50"
           >
-            <Send size={13} />
-            Send Enquiry
+            {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+            {sending ? 'Sending...' : 'Send Enquiry'}
           </button>
         </motion.form>
 
