@@ -1,8 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, ArrowUpRight, Mail, MapPin } from 'lucide-react';
-
-const TO = 'miroirstudioae@gmail.com';
+import { Send, ArrowUpRight, Mail, MapPin, CheckCircle } from 'lucide-react';
 
 const SERVICES = [
   'Food Photography',
@@ -15,22 +13,35 @@ const SERVICES = [
 ];
 
 export default function Contact() {
-  const [form, setForm] = useState({ name: '', phone: '', email: '', service: '', message: '' });
+  const [submitted, setSubmitted] = useState(false);
 
-  const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  useEffect(() => {
+    if (window.location.search.includes('success=true')) {
+      setSubmitted(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const subject = encodeURIComponent('New Enquiry — MIROIR Studio');
-    const body = encodeURIComponent([
-      `Name: ${form.name}`,
-      form.phone ? `Phone: ${form.phone}` : '',
-      form.email ? `Email: ${form.email}` : '',
-      form.service ? `Service: ${form.service}` : '',
-      form.message ? `Message: ${form.message}` : '',
-    ].filter(Boolean).join('\n'));
-    window.location.href = `mailto:${TO}?subject=${subject}&body=${body}`;
-  };
+  if (submitted) {
+    return (
+      <section id="contact" className="section-pad bg-[#080604] relative">
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#d4a84b20] to-transparent" />
+        <div className="container-site flex flex-col items-center justify-center min-h-[50vh] text-center">
+          <CheckCircle size={48} className="text-[#d4a84b] mb-6" />
+          <h2 className="font-sans text-3xl md:text-4xl text-[#f0ebe0] font-bold mb-3">Thank you!</h2>
+          <p className="font-body text-[0.82rem] text-white/40 leading-[1.9] max-w-md">
+            Your enquiry has been sent. We'll get back to you shortly.
+          </p>
+          <button
+            onClick={() => setSubmitted(false)}
+            className="mt-8 font-sans text-[0.62rem] tracking-[0.24em] uppercase text-[#d4a84b]/60 hover:text-[#d4a84b] transition-colors cursor-pointer bg-transparent border-none font-medium"
+          >
+            Send another enquiry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="contact" className="section-pad bg-[#080604] relative">
@@ -56,21 +67,29 @@ export default function Contact() {
         </motion.div>
 
         <motion.form
-          onSubmit={handleSubmit}
+          name="contact"
+          method="POST"
+          data-netlify="true"
+          data-netlify-honeypot="bot-field"
+          action="/?success=true"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.15 }}
           className="max-w-xl mx-auto flex flex-col gap-5 mb-16"
         >
+          <input type="hidden" name="form-name" value="contact" />
+          <p className="hidden">
+            <label>Don't fill this out: <input name="bot-field" /></label>
+          </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="flex flex-col gap-1.5">
               <label className="font-sans text-[0.52rem] tracking-[0.3em] text-[#d4a84b]/60 uppercase font-medium">Name *</label>
               <input
                 required
                 type="text"
-                value={form.name}
-                onChange={e => update('name', e.target.value)}
+                name="name"
                 placeholder="Your name"
                 className="bg-[#0c0a08] border border-[#24201a] text-[#f0ebe0] font-body text-[0.82rem] px-4 py-3.5 outline-none focus:border-[#d4a84b40] transition-colors duration-300 placeholder:text-white/20"
               />
@@ -79,8 +98,7 @@ export default function Contact() {
               <label className="font-sans text-[0.52rem] tracking-[0.3em] text-[#d4a84b]/60 uppercase font-medium">Phone</label>
               <input
                 type="tel"
-                value={form.phone}
-                onChange={e => update('phone', e.target.value)}
+                name="phone"
                 placeholder="+971..."
                 className="bg-[#0c0a08] border border-[#24201a] text-[#f0ebe0] font-body text-[0.82rem] px-4 py-3.5 outline-none focus:border-[#d4a84b40] transition-colors duration-300 placeholder:text-white/20"
               />
@@ -92,8 +110,7 @@ export default function Contact() {
               <label className="font-sans text-[0.52rem] tracking-[0.3em] text-[#d4a84b]/60 uppercase font-medium">Email</label>
               <input
                 type="email"
-                value={form.email}
-                onChange={e => update('email', e.target.value)}
+                name="email"
                 placeholder="you@email.com"
                 className="bg-[#0c0a08] border border-[#24201a] text-[#f0ebe0] font-body text-[0.82rem] px-4 py-3.5 outline-none focus:border-[#d4a84b40] transition-colors duration-300 placeholder:text-white/20"
               />
@@ -101,8 +118,7 @@ export default function Contact() {
             <div className="flex flex-col gap-1.5">
               <label className="font-sans text-[0.52rem] tracking-[0.3em] text-[#d4a84b]/60 uppercase font-medium">Service</label>
               <select
-                value={form.service}
-                onChange={e => update('service', e.target.value)}
+                name="service"
                 className="bg-[#0c0a08] border border-[#24201a] text-[#f0ebe0] font-body text-[0.82rem] px-4 py-3.5 outline-none focus:border-[#d4a84b40] transition-colors duration-300 appearance-none cursor-pointer"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d4a84b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 16px center' }}
               >
@@ -117,8 +133,7 @@ export default function Contact() {
           <div className="flex flex-col gap-1.5">
             <label className="font-sans text-[0.52rem] tracking-[0.3em] text-[#d4a84b]/60 uppercase font-medium">Message</label>
             <textarea
-              value={form.message}
-              onChange={e => update('message', e.target.value)}
+              name="message"
               placeholder="Tell us about your project..."
               rows={4}
               className="bg-[#0c0a08] border border-[#24201a] text-[#f0ebe0] font-body text-[0.82rem] px-4 py-3.5 outline-none focus:border-[#d4a84b40] transition-colors duration-300 resize-none placeholder:text-white/20"
