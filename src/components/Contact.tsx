@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Send, ArrowUpRight, Mail, MapPin } from 'lucide-react';
-import { openWhatsApp, waLink } from '../lib/whatsapp';
+
+const TO = 'miroirstudioae@gmail.com';
 
 const SERVICES = [
   'Food Photography',
@@ -20,17 +21,15 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const lines = [
-      'New Enquiry — MIROIR Studio',
-      '',
+    const subject = encodeURIComponent('New Enquiry — MIROIR Studio');
+    const body = encodeURIComponent([
       `Name: ${form.name}`,
       form.phone ? `Phone: ${form.phone}` : '',
       form.email ? `Email: ${form.email}` : '',
       form.service ? `Service: ${form.service}` : '',
       form.message ? `Message: ${form.message}` : '',
-    ].filter(Boolean);
-    const msg = lines.join('\n');
-    window.open(waLink(msg), '_blank', 'noopener,noreferrer');
+    ].filter(Boolean).join('\n'));
+    window.location.href = `mailto:${TO}?subject=${subject}&body=${body}`;
   };
 
   return (
