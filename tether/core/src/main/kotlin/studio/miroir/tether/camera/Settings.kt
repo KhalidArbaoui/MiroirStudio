@@ -21,6 +21,8 @@ class CameraSetting(
     val display: String,
     /** True when the tablet can step it (camera mode and lock permitting). */
     val adjustable: Boolean,
+    /** Why it can't be changed from the tablet, e.g. "Lens ring". */
+    val lockedBy: String? = null,
 )
 
 object SettingFormat {

@@ -18,6 +18,19 @@ class Histogram(
     val peak: Int
         get() = maxOf(red.max(1), green.max(1), blue.max(1), luma.max(1)).coerceAtLeast(1)
 
+    /**
+     * Average exposure relative to 18 % mid-grey, in stops (like a camera's average meter):
+     * 0 = mid-grey, +1 = one stop brighter. Computed in linear light from the luma histogram.
+     */
+    val evFromMidGrey: Float
+        get() {
+            if (pixelCount == 0) return 0f
+            var sum = 0.0
+            for (i in 0..255) if (luma[i] != 0) sum += luma[i] * SRGB_TO_LINEAR[i]
+            val mean = (sum / pixelCount).coerceAtLeast(1e-6)
+            return (kotlin.math.ln(mean / 0.18) / kotlin.math.ln(2.0)).toFloat()
+        }
+
     private fun IntArray.max(skipEnds: Int): Int {
         var m = 0
         for (i in skipEnds until size - skipEnds) if (this[i] > m) m = this[i]
@@ -25,6 +38,11 @@ class Histogram(
     }
 
     companion object {
+        private val SRGB_TO_LINEAR = DoubleArray(256) { i ->
+            val c = i / 255.0
+            if (c <= 0.04045) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
+        }
+
         const val HIGHLIGHT_LEVEL = 250
         const val SHADOW_LEVEL = 4
 

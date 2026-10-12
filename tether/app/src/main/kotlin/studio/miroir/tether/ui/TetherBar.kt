@@ -40,6 +40,8 @@ fun TetherBar(
     liveSupported: Boolean,
     liveOn: Boolean,
     receiving: Boolean,
+    /** Average exposure vs mid-grey in stops, for the meter (null = no image yet). */
+    meterEv: Float?,
     onStep: (SettingId, Int) -> Unit,
     onToggleLive: () -> Unit,
     onShutter: () -> Unit,
@@ -82,6 +84,8 @@ fun TetherBar(
         }
 
         Spacer(Modifier.width(12.dp))
+        ExposureMeter(meterEv)
+        Spacer(Modifier.width(16.dp))
         if (liveSupported) {
             Row(
                 Modifier.clip(RoundedCornerShape(50))
@@ -103,9 +107,17 @@ fun TetherBar(
 @Composable
 private fun SettingCell(s: CameraSetting, onStep: (SettingId, Int) -> Unit) {
     Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(s.id.label.uppercase(), style = T.Label)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (s.adjustable) StepArrow(Glyph.ChevronLeft) { onStep(s.id, -1) } else Spacer(Modifier.width(30.dp))
+        Text(
+            (s.lockedBy?.let { "${s.id.label} · $it" } ?: s.id.label).uppercase(),
+            style = T.Label, maxLines = 1,
+        )
+        // Fixed height so locked and adjustable cells line up.
+        Row(Modifier.height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (s.adjustable) {
+                StepArrow(Glyph.ChevronLeft) { onStep(s.id, -1) }
+            } else {
+                Box(Modifier.width(30.dp), contentAlignment = Alignment.Center) { Icon(Glyph.Lock, C.Faint, size = 14.dp) }
+            }
             Text(
                 s.display, style = T.Value.copy(color = if (s.adjustable) C.Cream else C.Muted),
                 textAlign = TextAlign.Center, maxLines = 1,
@@ -136,4 +148,42 @@ fun ShutterButton(enabled: Boolean, busy: Boolean = false, onClick: () -> Unit, 
             .background(if (enabled) C.Cream else C.Raised)
             .clickable(enabled = enabled, onClick = onClick),
     )
+}
+
+/** −3 … +3 stop scale with a gold marker, like the meter in a camera viewfinder. */
+@Composable
+private fun ExposureMeter(ev: Float?) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            if (ev == null) "EXPOSURE" else "EXPOSURE  " + (if (ev >= 0.05f) "+" else if (ev <= -0.05f) "" else "±") + "%.1f".format(ev),
+            style = T.Label,
+        )
+        androidx.compose.foundation.Canvas(Modifier.width(150.dp).height(30.dp)) {
+            val mid = size.height * 0.45f
+            val stop = size.width / 6.6f
+            val cx = size.width / 2
+            for (i in -9..9) {
+                val x = cx + i * stop / 3
+                val major = i % 3 == 0
+                drawLine(
+                    if (i == 0) C.Cream else if (major) C.Muted else C.Faint,
+                    androidx.compose.ui.geometry.Offset(x, mid - if (major) 7.dp.toPx() else 4.dp.toPx()),
+                    androidx.compose.ui.geometry.Offset(x, mid + if (major) 7.dp.toPx() else 4.dp.toPx()),
+                    strokeWidth = if (i == 0) 2.dp.toPx() else 1.dp.toPx(),
+                )
+            }
+            if (ev != null) {
+                val clamped = ev.coerceIn(-3.3f, 3.3f)
+                val x = cx + clamped * stop
+                val color = if (kotlin.math.abs(ev) > 3f) C.Bad else C.Gold
+                val tri = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(x, mid + 9.dp.toPx())
+                    lineTo(x - 6.dp.toPx(), size.height)
+                    lineTo(x + 6.dp.toPx(), size.height)
+                    close()
+                }
+                drawPath(tri, color)
+            }
+        }
+    }
 }

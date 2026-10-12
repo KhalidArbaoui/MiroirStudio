@@ -335,6 +335,16 @@ class PtpTest {
     }
 
     @Test
+    fun meterReadsMidGreyAsZero() {
+        // sRGB 118 ≈ 18 % linear.
+        val grey = Histogram.compute(IntArray(1000) { 0xFF767676.toInt() })
+        assertEquals(0f, grey.evFromMidGrey, 0.1f)
+        // One stop brighter: 36 % linear ≈ sRGB 163.
+        val bright = Histogram.compute(IntArray(1000) { 0xFFA3A3A3.toInt() })
+        assertEquals(1f, bright.evFromMidGrey, 0.1f)
+    }
+
+    @Test
     fun neutralSampleDetectsWarmCast() {
         assertTrue(NeutralSample(128, 128, 128).isNeutral)
         val warm = NeutralSample(150, 128, 110)

@@ -171,7 +171,7 @@ class SonyDriver(
             props[code]?.let { d ->
                 // The camera marks aperture read-only when the lens ring (not the body) sets it.
                 if (id == SettingId.Aperture && !d.writable) {
-                    CameraSetting(id, SettingFormat.format(id, code, d.current) + " · lens ring", adjustable = false)
+                    CameraSetting(id, SettingFormat.format(id, code, d.current), adjustable = false, lockedBy = "Lens ring")
                 } else {
                     toSetting(id, d, adjustable = true)
                 }

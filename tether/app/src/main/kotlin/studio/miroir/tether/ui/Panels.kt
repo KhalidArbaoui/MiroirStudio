@@ -26,7 +26,13 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -96,9 +102,10 @@ fun HistogramView(h: Histogram?, height: Dp = 150.dp, modifier: Modifier = Modif
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Stat("Shadows", h?.let { "%.1f%%".format(it.shadowClipPct) } ?: "–", (h?.shadowClipPct ?: 0f) > 0.5f)
+            // Red only when clipping is meaningful; a few pure-black pixels are normal.
+            Stat("Shadows", h?.let { "%.1f%%".format(it.shadowClipPct) } ?: "–", (h?.shadowClipPct ?: 0f) > 2f)
             Stat("Average", h?.let { "${(it.meanLuma / 255f * 100).toInt()}%" } ?: "–", false)
-            Stat("Highlights", h?.let { "%.1f%%".format(it.highlightClipPct) } ?: "–", (h?.highlightClipPct ?: 0f) > 0.5f)
+            Stat("Highlights", h?.let { "%.1f%%".format(it.highlightClipPct) } ?: "–", (h?.highlightClipPct ?: 0f) > 1f)
         }
     }
 }
@@ -113,18 +120,35 @@ private fun Stat(label: String, value: String, alert: Boolean) {
 
 /** Name, source, exposure, lens, rating for the selected shot. */
 @Composable
-fun ShotInfo(shot: Shot?, exif: ExifSummary?, onRate: (Int) -> Unit, onPick: () -> Unit) {
+fun ShotInfo(
+    shot: Shot?,
+    onRate: (Int) -> Unit,
+    onPick: () -> Unit,
+    title: String = "Shot",
+    showThumb: Boolean = false,
+) {
     Column {
-        SectionLabel("Shot")
+        SectionLabel(title)
         if (shot == null) {
-            Text("No shot selected", style = T.Small)
+            Text("Take a photo — its details appear here.", style = T.Small)
             return@Column
+        }
+        val exif: ExifSummary = shot.exif
+        if (showThumb) {
+            shot.thumb?.let {
+                Image(
+                    it.asImageBitmap(), shot.baseName,
+                    Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(C.Ink),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.height(10.dp))
+            }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(shot.baseName, style = T.Body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f), maxLines = 1)
             Tag(shot.source.label, if (shot.source == PreviewSource.Jpeg) C.Ok else C.Warn)
         }
-        if (exif != null) {
+        run {
             if (exif.exposureLine.isNotEmpty()) Text(exif.exposureLine, style = T.Small.copy(color = C.Cream), modifier = Modifier.padding(top = 6.dp))
             listOfNotNull(exif.whiteBalance, exif.lens).takeIf { it.isNotEmpty() }?.let {
                 Text(it.joinToString("  ·  "), style = T.Small, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
@@ -208,16 +232,33 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
     }
 }
 
+/** Camera status; tap to connect, or (when connected) to open a Disconnect menu. */
 @Composable
-fun StatusChip(status: CameraStatus) {
+fun StatusChip(status: CameraStatus, onConnect: () -> Unit, onDisconnect: () -> Unit) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        StatusChipBody(status, Modifier.clip(RoundedCornerShape(50)).clickable {
+            if (status.state == LinkState.Connected) menu = true else if (status.state != LinkState.Connecting) onConnect()
+        })
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = C.Raised) {
+            DropdownMenuItem(
+                text = { Text("Disconnect camera", style = T.Body) },
+                onClick = { menu = false; onDisconnect() },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusChipBody(status: CameraStatus, modifier: Modifier) {
     val (dot, label) = when (status.state) {
         LinkState.Connected -> C.Ok to "${status.brand} ${status.model}".trim()
         LinkState.Connecting -> C.Warn to "Connecting…"
-        LinkState.Error -> C.Bad to "Not connected"
-        LinkState.Disconnected -> C.Faint to "No camera"
+        LinkState.Error -> C.Bad to "Not connected · tap to connect"
+        LinkState.Disconnected -> C.Faint to "No camera · tap to connect"
     }
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(C.Raised).padding(horizontal = 12.dp, vertical = 7.dp),
+        modifier.background(C.Raised).padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(7.dp).background(dot, CircleShape))

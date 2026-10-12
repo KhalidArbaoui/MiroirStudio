@@ -137,10 +137,14 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                     SectionLabel(if (live) "Live histogram" else "Histogram")
                     HistogramView(if (live) liveHistogram else analysis?.histogram)
                 }
+                // In live view, show the last shot so you can compare while adjusting.
+                val infoShot = if (live) shots.lastOrNull() else selected
                 ShotInfo(
-                    selected, analysis?.exif,
-                    onRate = { r -> selected?.let { vm.setRating(it.id, r) } },
-                    onPick = { selected?.let { vm.togglePick(it.id) } },
+                    infoShot,
+                    onRate = { r -> infoShot?.let { vm.setRating(it.id, r) } },
+                    onPick = { infoShot?.let { vm.togglePick(it.id) } },
+                    title = if (live) "Last shot" else "Shot",
+                    showThumb = live,
                 )
                 Column {
                     SectionLabel("Session")
@@ -153,7 +157,9 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val tetherBar: @Composable () -> Unit = {
             TetherBar(
                 connected = connected, settings = settings, liveSupported = liveSupported, liveOn = live,
-                receiving = transfer != null, onStep = vm::stepSetting, onToggleLive = vm::toggleLiveView,
+                receiving = transfer != null,
+                meterEv = (if (live) liveHistogram else analysis?.histogram)?.evFromMidGrey,
+                onStep = vm::stepSetting, onToggleLive = vm::toggleLiveView,
                 onShutter = vm::capture, onConnect = onConnectRequest,
             )
         }
@@ -189,12 +195,15 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                             TransferBar(transfer)
                         }
                     }
-                    if (shots.isNotEmpty()) FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList)
-                    Filmstrip(visibleShots, selectedId, { id ->
-                        // Tapping a shot leaves live view so you can review it.
-                        if (liveWanted) vm.toggleLiveView()
-                        vm.select(id)
-                    })
+                    // The filmstrip appears with the first shot, so the image gets the space until then.
+                    if (shots.isNotEmpty()) {
+                        FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList)
+                        Filmstrip(visibleShots, selectedId, { id ->
+                            // Tapping a shot leaves live view so you can review it.
+                            if (liveWanted) vm.toggleLiveView()
+                            vm.select(id)
+                        })
+                    }
                 }
             }
 
@@ -225,13 +234,8 @@ private fun TopBar(
         Spacer(Modifier.width(10.dp))
         Text("TETHER", style = T.Label.copy(letterSpacing = 3.sp))
         Spacer(Modifier.weight(1f))
-        StatusChip(status)
+        StatusChip(status, onConnect, onDisconnect)
         Spacer(Modifier.width(10.dp))
-        when (status.state) {
-            LinkState.Connected -> IconButton(Glyph.Unplug, onDisconnect, size = 40.dp, tint = C.Muted)
-            LinkState.Connecting -> Spacer(Modifier.size(40.dp))
-            else -> IconButton(Glyph.Plug, onConnect, size = 40.dp, tint = C.Gold)
-        }
         IconButton(Glyph.Info, onGuide, size = 40.dp)
         IconButton(Glyph.Log, onLog, size = 40.dp)
     }

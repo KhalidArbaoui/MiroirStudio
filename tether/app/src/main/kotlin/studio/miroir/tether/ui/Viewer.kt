@@ -215,7 +215,6 @@ fun LiveViewPane(
                 }
             }
         }
-        Pill("● LIVE", Modifier.align(Alignment.TopEnd).padding(14.dp), color = C.Bad)
     }
 }
 
