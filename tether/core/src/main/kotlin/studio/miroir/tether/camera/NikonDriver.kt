@@ -1,0 +1,92 @@
+package studio.miroir.tether.camera
+
+import studio.miroir.tether.ptp.NikonEvents
+import studio.miroir.tether.ptp.ObjectInfo
+import studio.miroir.tether.ptp.Ptp
+import studio.miroir.tether.ptp.PtpEvent
+import studio.miroir.tether.ptp.PtpException
+import studio.miroir.tether.ptp.PtpSession
+import studio.miroir.tether.ptp.TetherLog
+
+/**
+ * Nikon Z (Z8, Z9, Z6/Z7 series…). Captures to the memory card so the card always keeps a copy,
+ * and polls Nikon CheckEvent because Nikon bodies don't reliably use the interrupt pipe.
+ */
+class NikonDriver(
+    session: PtpSession, log: TetherLog, listener: CameraListener, options: DriverOptions,
+) : GenericDriver(session, log, listener, options) {
+    override val brand = "Nikon"
+
+    private var useCheckEvent = true
+    private var useRecInMedia = true
+    private var lastCheck = 0L
+
+    override fun connect() {
+        val info = session.deviceInfo
+        if (info != null && info.operations.isNotEmpty() && !info.supports(Ptp.OP_NIKON_CHECK_EVENT)) {
+            log.log("Camera doesn't list CheckEvent; will try it anyway")
+        }
+    }
+
+    override fun capture() {
+        if (useRecInMedia) {
+            // Params: AF per camera setting (0xFFFFFFFF), record to card (0).
+            val r = session.retryBusy {
+                session.transaction(Ptp.OP_NIKON_CAPTURE_REC_IN_MEDIA, longArrayOf(0xFFFFFFFFL, 0))
+            }
+            when {
+                r.ok -> { waitReady(); return }
+                r.code == Ptp.RC_OPERATION_NOT_SUPPORTED -> {
+                    log.log("InitiateCaptureRecInMedia not supported, using standard capture")
+                    useRecInMedia = false
+                }
+                r.code == Ptp.RC_NIKON_OUT_OF_FOCUS ->
+                    throw PtpException("Camera couldn't focus — check AF or switch to MF", r.code)
+                else -> throw PtpException("Capture failed: ${Ptp.responseName(r.code)}", r.code)
+            }
+        }
+        super.capture()
+        waitReady()
+    }
+
+    private fun waitReady() {
+        repeat(80) {
+            val r = session.transaction(Ptp.OP_NIKON_DEVICE_READY)
+            when (r.code) {
+                Ptp.RC_DEVICE_BUSY -> Thread.sleep(100)
+                Ptp.RC_NIKON_OUT_OF_FOCUS -> throw PtpException("Camera couldn't focus", r.code)
+                else -> return
+            }
+        }
+    }
+
+    override fun pollVendorEvents(): List<PtpEvent> {
+        if (!useCheckEvent) return emptyList()
+        val now = System.currentTimeMillis()
+        if (now - lastCheck < 200) return emptyList()
+        lastCheck = now
+        val r = session.transaction(Ptp.OP_NIKON_CHECK_EVENT)
+        return when {
+            r.ok -> NikonEvents.parse(r.data)
+            r.code == Ptp.RC_OPERATION_NOT_SUPPORTED -> {
+                log.log("CheckEvent not supported; relying on USB interrupt events")
+                useCheckEvent = false
+                emptyList()
+            }
+            else -> emptyList()
+        }
+    }
+
+    override fun fetchRawPreview(handle: Long, info: ObjectInfo) {
+        val r = session.retryBusy {
+            session.transaction(Ptp.OP_NIKON_GET_LARGE_THUMB, longArrayOf(handle), timeoutMs = 10_000)
+        }
+        if (r.ok && r.data.size > 1000) {
+            log.log("Got NEF preview for ${info.filename} (${r.data.size / 1024} KB)")
+            listener.onFile(DownloadedFile(info, r.data, isFullFile = false))
+        } else {
+            log.log("No large preview for ${info.filename} (${Ptp.responseName(r.code)}); downloading full RAW")
+            download(handle, info)
+        }
+    }
+}

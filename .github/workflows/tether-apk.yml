@@ -1,0 +1,53 @@
+name: Build MIROIR Tether APK
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["tether/**", ".github/workflows/tether-apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tether
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Test camera protocol
+        run: ./gradlew :core:test --console=plain
+
+      - name: Build APK
+        run: ./gradlew :app:assembleDebug --console=plain
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk "MIROIR-Tether-${GITHUB_RUN_NUMBER}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MIROIR-Tether-${{ github.run_number }}
+          path: tether/MIROIR-Tether-*.apk
+
+      # A release per build so the APK can be downloaded straight from the tablet's browser.
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: tether-build-${{ github.run_number }}
+          name: MIROIR Tether build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            Branch: ${{ github.ref_name }} — commit ${{ github.sha }}
+            Install on the Samsung tablet: download the APK below, open it, allow "Install unknown apps" for your browser.
+          files: tether/MIROIR-Tether-*.apk

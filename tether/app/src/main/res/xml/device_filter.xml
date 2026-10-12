@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nikon -->
+    <usb-device vendor-id="1200" />
+    <!-- Sony -->
+    <usb-device vendor-id="1356" />
+    <!-- Any PTP / still-image camera -->
+    <usb-device class="6" />
+</resources>

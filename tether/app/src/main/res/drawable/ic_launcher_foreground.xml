@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MIROIR "M" mark (from the studio favicon), centred in the adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:translateX="22" android:translateY="22">
+        <path
+            android:fillColor="#F5DFB7"
+            android:pathData="M14,45V19h8l10,16 10,-16h8v26h-7V29L34,43h-4l-9,-14v16h-7Z" />
+    </group>
+</vector>
