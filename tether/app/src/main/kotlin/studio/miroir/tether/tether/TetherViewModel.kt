@@ -82,6 +82,8 @@ data class Transfer(val filename: String, val done: Long, val total: Long) {
 
 enum class Tool { None, Loupe, WhiteBalance }
 
+private const val LIVE_VIEW_GIVE_UP_MS = 4000L
+
 class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener {
     private val prefs = app.getSharedPreferences("tether", Context.MODE_PRIVATE)
 
@@ -184,7 +186,9 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             val events = startEventReader(transport, driver)
             _liveSupported.value = driver.supportsLiveView
             var liveActive = false
-            var liveFailures = 0
+            // Time live view has been failing continuously (0 = fine). Cameras pause frames while
+            // focusing or shooting, so only give up after a long stretch.
+            var liveFailingSince = 0L
             var lastHistogram = 0L
             var lastBattery = 0L
             var lastSettings = 0L
@@ -216,7 +220,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                             try {
                                 driver.startLiveView()
                                 liveActive = true
-                                liveFailures = 0
+                                liveFailingSince = 0L
                             } catch (e: PtpException) {
                                 liveViewWanted.value = false
                                 showToast(e.message ?: "Live view didn't start")
@@ -240,12 +244,20 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                                     }
                                 }
                             }
-                            liveFailures = 0
+                            liveFailingSince = 0L
                         } catch (e: PtpException) {
-                            if (++liveFailures >= 5) {
-                                AppLog.log("Live view stopped: ${e.message}")
-                                showToast("Live view stopped: ${e.message}")
+                            val now = System.currentTimeMillis()
+                            if (liveFailingSince == 0L) {
+                                liveFailingSince = now
+                                AppLog.log("Live view paused: ${e.message}")
+                            }
+                            if (now - liveFailingSince > LIVE_VIEW_GIVE_UP_MS) {
+                                AppLog.log("Live view stopped after ${now - liveFailingSince} ms: ${e.message}")
+                                showToast("Live view stopped — tap Live view to restart")
                                 liveViewWanted.value = false
+                                liveFailingSince = 0L
+                            } else {
+                                Thread.sleep(100) // let the camera finish focusing
                             }
                         }
                     }

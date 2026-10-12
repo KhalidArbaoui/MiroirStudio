@@ -77,7 +77,10 @@ class NikonDriver(
     override fun liveViewFrame(): ByteArray? {
         val r = session.transaction(Ptp.OP_NIKON_GET_LIVE_VIEW_IMG, timeoutMs = 3000)
         return when {
-            r.ok -> JpegExtractor.firstJpeg(r.data)
+            r.ok -> {
+                liveRestarts = 0
+                JpegExtractor.firstJpeg(r.data)
+            }
             r.code == Ptp.RC_DEVICE_BUSY -> null
             r.code == Ptp.RC_NIKON_NOT_LIVE_VIEW && liveRestarts < 3 -> {
                 // The camera drops live view after a capture or when its own screen takes over.
