@@ -33,11 +33,31 @@ class SonyDriver(
         repeat(30) {
             if (refreshProps(force = true)) {
                 log.log("Sony ready, ${props.size} properties")
+                takeSettingsPriority()
                 return
             }
             Thread.sleep(100)
         }
         log.log("Sony did not return properties — is USB Connection set to PC Remote?")
+    }
+
+    /**
+     * "Priority Key Settings": by default the camera's own dials win and remote changes are
+     * ignored. Switch it to PC Remote so the tablet can change exposure.
+     */
+    private fun takeSettingsPriority() {
+        val d = props[Ptp.SONY_PROP_PRIORITY_KEY] ?: run {
+            log.log("Sony: no priority-key property, skipping")
+            return
+        }
+        log.log("Sony priority key: $d")
+        if (d.current == Ptp.SONY_PRIORITY_PC_REMOTE) return
+        val r = session.transaction(
+            Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(Ptp.SONY_PROP_PRIORITY_KEY.toLong()),
+            dataOut = PropDescParser.encode(d.dataType, Ptp.SONY_PRIORITY_PC_REMOTE),
+        )
+        log.log("Sony priority → PC Remote: $r")
+        waitFor(Ptp.SONY_PROP_PRIORITY_KEY, 1500) { it == Ptp.SONY_PRIORITY_PC_REMOTE }
     }
 
     private fun sdioConnect(phase: Long) {
@@ -135,58 +155,70 @@ class SonyDriver(
         val code = settingCodes[id] ?: return
         refreshProps(force = true)
         val d = props[code] ?: return
-        val before = settingKey(id, code, d.current)
-        val target = targetFor(id, d, direction)
+        log.log("Step ${id.label} ${if (direction > 0) "+" else "-"}: now $d")
 
-        // 1) Absolute value, when the camera lists the allowed values.
-        if (target != null && setAbsolute(code, d.dataType, target)) {
-            log.log("${id.label} → ${SettingFormat.format(id, code, target)}")
+        // Exposure dials (shutter, aperture, EV) are moved by clicks, like libgphoto2 does on Sony.
+        if (id in dialSettings) {
+            stepByClick(id, code, d.current, direction)
             return
         }
-        if (id !in dialSettings) {
-            throw PtpException("Camera refused ${id.label} — check the camera's mode", Ptp.RC_GENERAL_ERROR)
+        val target = targetFor(id, d, direction) ?: return
+        val r = session.transaction(
+            Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
+            dataOut = PropDescParser.encode(d.dataType, target),
+        )
+        log.log("Set ${id.label} = ${SettingFormat.format(id, code, target)}: $r")
+        if (!r.ok || waitFor(code, 2000) { it == target } == null) {
+            throw PtpException("Camera didn't accept ${id.label} — check the camera's mode", Ptp.RC_GENERAL_ERROR)
         }
+    }
 
-        // 2) Dial click, learning which way +1 turns.
+    private fun stepByClick(id: SettingId, code: Int, start: Long, direction: Int) {
+        val before = settingKey(id, code, start)
         val sign = clickSign[code] ?: 1
         click(code, sign * direction)
-        val after = current(id, code) ?: return
-        val moved = after - before
-        if (moved != 0.0 && (moved > 0) != (direction > 0)) {
+        val now = waitFor(code, 2000) { it != start }
+        if (now == null) {
+            throw PtpException(
+                "${id.label} didn't change. Check: mode dial (M = all, A = aperture, S = shutter), " +
+                    "lens aperture ring on A, and that the camera isn't showing a menu.",
+                Ptp.RC_GENERAL_ERROR,
+            )
+        }
+        val moved = settingKey(id, code, now) - before
+        if ((moved > 0) != (direction > 0)) {
             log.log("${id.label}: dial runs the other way, correcting")
             clickSign[code] = -sign
             click(code, -sign * direction)
+            waitFor(code, 2000) { it != now }
+            val after = props[code]?.current ?: return
             click(code, -sign * direction)
-            current(id, code)
-        } else if (moved != 0.0) {
-            clickSign[code] = sign
+            waitFor(code, 2000) { it != after }
         } else {
-            throw PtpException("${id.label} didn't change — check the camera's mode (M/S/A)", Ptp.RC_GENERAL_ERROR)
+            clickSign[code] = sign
         }
-    }
-
-    private fun setAbsolute(code: Int, type: Int, value: Long): Boolean {
-        val r = session.transaction(
-            Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
-            dataOut = PropDescParser.encode(type, value),
-        )
-        if (!r.ok) return false
-        Thread.sleep(250)
-        refreshProps(force = true)
-        return props[code]?.current == value
+        log.log("${id.label} → ${props[code]?.let { SettingFormat.format(id, code, it.current) }}")
     }
 
     private fun click(code: Int, direction: Int) {
-        session.transaction(
+        val r = session.transaction(
             Ptp.OP_SONY_SET_CONTROL_DEVICE_B, longArrayOf(code.toLong()),
             dataOut = byteArrayOf(if (direction > 0) 0x01 else 0xFF.toByte()),
         )
-        Thread.sleep(250)
+        if (!r.ok) log.log("Sony click ${"0x%04X".format(code)}: $r")
     }
 
-    private fun current(id: SettingId, code: Int): Double? {
-        refreshProps(force = true)
-        return props[code]?.let { settingKey(id, code, it.current) }
+    /** Polls the camera until property [code] satisfies [done]; returns the value, or null on timeout. */
+    private fun waitFor(code: Int, timeoutMs: Long, done: (Long) -> Boolean): Long? {
+        val end = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < end) {
+            Thread.sleep(120)
+            if (refreshProps(force = true)) {
+                val v = props[code]?.current
+                if (v != null && done(v)) return v
+            }
+        }
+        return null
     }
 
     override fun batteryLevel(): Int? {

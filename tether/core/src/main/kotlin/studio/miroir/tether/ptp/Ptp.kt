@@ -78,6 +78,8 @@ object Ptp {
     const val SONY_PROP_SHUTTER = 0xD20D
     const val SONY_PROP_COLOR_TEMPERATURE = 0xD20F
     const val SONY_PROP_ISO = 0xD21E
+    const val SONY_PROP_PRIORITY_KEY = 0xD25A
+    const val SONY_PRIORITY_PC_REMOTE = 0x0010L
     const val SONY_PROP_OBJECT_IN_MEMORY = 0xD215
     const val SONY_PROP_BATTERY = 0xD218
     const val SONY_CTRL_S1_HALF_PRESS = 0xD2C1
