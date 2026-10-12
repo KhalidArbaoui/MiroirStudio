@@ -147,7 +147,14 @@ class SonyDriver(
         val kelvinMode = props[Ptp.PROP_WHITE_BALANCE]?.current == 0x8012L
         return settingCodes.mapNotNull { (id, code) ->
             if (id == SettingId.ColorTemp && !kelvinMode) return@mapNotNull null
-            props[code]?.let { toSetting(id, it, adjustable = true) }
+            props[code]?.let { d ->
+                // The camera marks aperture read-only when the lens ring (not the body) sets it.
+                if (id == SettingId.Aperture && !d.writable) {
+                    CameraSetting(id, SettingFormat.format(id, code, d.current) + " · lens ring", adjustable = false)
+                } else {
+                    toSetting(id, d, adjustable = true)
+                }
+            }
         }
     }
 

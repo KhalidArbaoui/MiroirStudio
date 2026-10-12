@@ -231,10 +231,12 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
      * a USB stack that rejects large reads, or a camera stuck in an old session.
      */
     private fun handshake(transport: UsbPtpTransport, session: PtpSession): studio.miroir.tether.ptp.DeviceInfo {
+        // Samsung's USB stack rejects 1 MB bulk reads, so start with 16 KB (still fast enough).
+        session.readChunk = PtpSession.SMALL_READ_CHUNK
         session.drain()
         val attempts = listOf<Pair<String, () -> Unit>>(
-            "normal" to {},
-            "16 KB reads" to { session.readChunk = PtpSession.SMALL_READ_CHUNK },
+            "16 KB reads" to {},
+            "large reads" to { session.readChunk = PtpSession.READ_CHUNK },
             "USB reset" to {
                 transport.reset()
                 Thread.sleep(800)
