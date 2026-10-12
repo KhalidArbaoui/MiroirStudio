@@ -56,6 +56,13 @@ class PtpSession(private val transport: PtpTransport, private val log: TetherLog
     private var nextTransactionId = 1L
     private val readBuf = ByteArray(READ_CHUNK)
 
+    /**
+     * Max bytes per USB read. Some Android USB stacks reject large bulk reads (they fail at once
+     * with -1), so the app drops this to [SMALL_READ_CHUNK] when that happens.
+     */
+    var readChunk: Int = READ_CHUNK
+        set(value) { field = value.coerceIn(transport.maxPacketSize, READ_CHUNK) }
+
     /** Bytes received past the end of a data phase (the start of the response container). */
     private var leftover: ByteArray? = null
 
@@ -185,10 +192,9 @@ class PtpSession(private val transport: PtpTransport, private val log: TetherLog
         }
     }
 
-    private fun readOnce(timeoutMs: Int, wanted: Int = READ_CHUNK): ByteArray {
-        val len = roundUpToPacket(minOf(wanted, READ_CHUNK))
-        val n = transport.read(readBuf, len, timeoutMs)
-        if (n < 0) throw PtpException("USB read timed out")
+    private fun readOnce(timeoutMs: Int): ByteArray {
+        val len = roundUpToPacket(readChunk)
+        val n = timedRead(len, timeoutMs, "response")
         return readBuf.copyOf(n)
     }
 
@@ -204,8 +210,7 @@ class PtpSession(private val transport: PtpTransport, private val log: TetherLog
         progress?.invoke(got.toLong(), total.toLong())
 
         while (got < total) {
-            val n = transport.read(readBuf, roundUpToPacket(minOf(total - got, READ_CHUNK)), timeoutMs)
-            if (n < 0) throw PtpException("USB read timed out during data phase ($got/$total)")
+            val n = timedRead(roundUpToPacket(minOf(total - got, readChunk)), timeoutMs, "data $got/$total")
             if (n == 0) continue
             val take = minOf(n, total - got)
             readBuf.copyInto(out, got, 0, take)
@@ -214,6 +219,30 @@ class PtpSession(private val transport: PtpTransport, private val log: TetherLog
             progress?.invoke(got.toLong(), total.toLong())
         }
         return out
+    }
+
+    /** Bulk read that reports *how* it failed: instantly (USB stack refused) or after the timeout. */
+    private fun timedRead(len: Int, timeoutMs: Int, what: String): Int {
+        val t0 = System.nanoTime()
+        val n = transport.read(readBuf, len, timeoutMs)
+        if (n < 0) {
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            val kind = if (ms < timeoutMs / 2) "failed immediately" else "timed out"
+            throw PtpException("USB read $kind after $ms ms ($what, asked $len bytes)", READ_FAILED)
+        }
+        return n
+    }
+
+    /** Discards anything left in the camera's send buffer (e.g. from another app's session). */
+    fun drain() {
+        var total = 0
+        repeat(8) {
+            val n = transport.read(readBuf, roundUpToPacket(minOf(readChunk, 64 * 1024)), 80)
+            if (n <= 0) return@repeat
+            total += n
+        }
+        leftover = null
+        if (total > 0) log.log("Drained $total stale bytes from camera")
     }
 
     private fun stashExcess(chunk: ByteArray, from: Int) {
@@ -227,6 +256,9 @@ class PtpSession(private val transport: PtpTransport, private val log: TetherLog
 
     companion object {
         const val READ_CHUNK = 1 shl 20 // 1 MB per USB transfer
+        const val SMALL_READ_CHUNK = 16 * 1024
+        /** Pseudo response code for a failed USB read (not a camera answer). */
+        const val READ_FAILED = -1
         private val EMPTY = ByteArray(0)
 
         private fun u16At(b: ByteArray, o: Int) = (b[o].toInt() and 0xFF) or ((b[o + 1].toInt() and 0xFF) shl 8)

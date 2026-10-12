@@ -49,6 +49,22 @@ class UsbPtpTransport private constructor(
         }
     }
 
+    /** USB endpoints, for the log. */
+    fun describe(): String =
+        "iface ${iface.id} class ${iface.interfaceClass}, bulk-in 0x%02X (%d B), bulk-out 0x%02X (%d B), int-in %s".format(
+            bulkIn.address, bulkIn.maxPacketSize, bulkOut.address, bulkOut.maxPacketSize,
+            interruptIn?.let { "0x%02X".format(it.address) } ?: "none",
+        )
+
+    /** PTP class request "Get Device Status" (0x67): 0x2001 = OK, 0x2019 = busy. */
+    fun deviceStatus(): String {
+        val buf = ByteArray(32)
+        val n = connection.controlTransfer(0xA1, 0x67, 0, iface.id, buf, buf.size, 1000)
+        if (n < 4) return "no answer ($n)"
+        val code = (buf[2].toInt() and 0xFF) or ((buf[3].toInt() and 0xFF) shl 8)
+        return "0x%04X".format(code)
+    }
+
     override fun close() {
         runCatching { connection.releaseInterface(iface) }
         runCatching { connection.close() }

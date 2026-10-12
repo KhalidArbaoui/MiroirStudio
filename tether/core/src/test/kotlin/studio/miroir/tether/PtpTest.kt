@@ -62,6 +62,18 @@ class PtpTest {
     }
 
     @Test
+    fun smallReadChunksStillReassembleLargeObjects() {
+        val big = Random(13).nextBytes(1_234_567)
+        val cam = FakeCamera { cmd -> if (cmd.code == Ptp.OP_GET_OBJECT) FakeReply(data = big) else FakeReply() }
+        val s = PtpSession(cam, log)
+        s.readChunk = PtpSession.SMALL_READ_CHUNK
+        s.drain()
+        s.openSession()
+        assertArrayEquals(big, s.getObject(9))
+        assertTrue(s.transaction(Ptp.OP_CLOSE_SESSION).ok)
+    }
+
+    @Test
     fun exactPacketMultipleWithoutZlpStillFindsResponse() {
         // 12-byte header + 1012 bytes = 1024 = 2 packets, camera sends response in the same transfer.
         val payload = Random(2).nextBytes(1012)

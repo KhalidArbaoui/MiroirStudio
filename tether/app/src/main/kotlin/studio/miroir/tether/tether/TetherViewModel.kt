@@ -138,15 +138,9 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         try {
             AppLog.log("Opening ${device.manufacturerName} ${device.productName} (VID %04X PID %04X)".format(device.vendorId, device.productId))
             transport = UsbPtpTransport.open(manager, device)
+            AppLog.log("USB: ${transport.describe()}, status ${transport.deviceStatus()}")
             val session = PtpSession(transport, AppLog)
-            val info = try {
-                session.readDeviceInfo()
-            } catch (e: PtpException) {
-                AppLog.log("DeviceInfo failed (${e.message}); resetting USB and retrying")
-                transport.reset()
-                Thread.sleep(500)
-                session.readDeviceInfo()
-            }
+            val info = handshake(transport, session)
             AppLog.log("Camera: $info")
             session.openSession()
 
@@ -192,6 +186,39 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             _transfer.value = null
             transport?.close()
         }
+    }
+
+    /**
+     * GetDeviceInfo with fallbacks for the usual Android problems: stale data from another app,
+     * a USB stack that rejects large reads, or a camera stuck in an old session.
+     */
+    private fun handshake(transport: UsbPtpTransport, session: PtpSession): studio.miroir.tether.ptp.DeviceInfo {
+        session.drain()
+        val attempts = listOf<Pair<String, () -> Unit>>(
+            "normal" to {},
+            "16 KB reads" to { session.readChunk = PtpSession.SMALL_READ_CHUNK },
+            "USB reset" to {
+                transport.reset()
+                Thread.sleep(800)
+                AppLog.log("Status after reset: ${transport.deviceStatus()}")
+            },
+        )
+        var last: Exception? = null
+        for ((name, prepare) in attempts) {
+            try {
+                prepare()
+                session.drain()
+                return session.readDeviceInfo().also { AppLog.log("Handshake OK ($name)") }
+            } catch (e: PtpException) {
+                AppLog.log("Handshake ($name) failed: ${e.message}")
+                last = e
+            }
+        }
+        throw PtpException(
+            "Camera doesn't answer over USB. Check: camera ON and awake, airplane mode ON, " +
+                "Z8 USB power delivery OFF / Sony USB Connection = PC Remote, and no other app is using the camera. " +
+                "(${last?.message})",
+        )
     }
 
     private fun startEventReader(transport: UsbPtpTransport, driver: CameraDriver): Thread =
