@@ -42,6 +42,7 @@ private val guide = listOf(
             "Image quality: RAW + JPEG fine, JPEG size L. Colour space: sRGB.",
             "Tone mode: SDR (HLG/HEIF won't match Lightroom).",
             "Active D-Lighting OFF — Lightroom ignores it, so the JPEG would look brighter than your RAW.",
+            "Custom setting d8 'Apply settings to live view' ON, so live view, the live histogram and the meter show the real exposure.",
         ),
     ),
     GuideSection(
@@ -53,6 +54,8 @@ private val guide = listOf(
             "Airplane mode ON. Colour space sRGB.",
             "DRO / Auto HDR OFF — Lightroom ignores it.",
             "Use the USB-C port (faster than micro-USB).",
+            "Live View Display → Setting Effect ON, otherwise live view looks bright even when the photo will be dark.",
+            "USB Power Supply OFF, and lens aperture ring on A (e.g. Sigma 24-70) so the tablet can change aperture.",
         ),
     ),
     GuideSection(
