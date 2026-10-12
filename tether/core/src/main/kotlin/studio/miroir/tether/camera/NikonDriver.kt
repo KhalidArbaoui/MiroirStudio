@@ -78,15 +78,18 @@ class NikonDriver(
     }
 
     override fun fetchRawPreview(handle: Long, info: ObjectInfo) {
+        try {
+            super.fetchRawPreview(handle, info)
+            return
+        } catch (e: PtpException) {
+            log.log("RAW download failed (${e.message}); falling back to the camera's preview")
+        }
         val r = session.retryBusy {
             session.transaction(Ptp.OP_NIKON_GET_LARGE_THUMB, longArrayOf(handle), timeoutMs = 10_000)
         }
         if (r.ok && r.data.size > 1000) {
-            log.log("Got NEF preview for ${info.filename} (${r.data.size / 1024} KB)")
+            log.log("Got small NEF preview for ${info.filename} (${r.data.size / 1024} KB)")
             listener.onFile(DownloadedFile(info, r.data, isFullFile = false))
-        } else {
-            log.log("No large preview for ${info.filename} (${Ptp.responseName(r.code)}); downloading full RAW")
-            download(handle, info)
         }
     }
 }

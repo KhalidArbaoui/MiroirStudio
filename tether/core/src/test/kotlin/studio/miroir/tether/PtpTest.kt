@@ -10,6 +10,7 @@ import studio.miroir.tether.camera.CameraDriver
 import studio.miroir.tether.camera.CameraListener
 import studio.miroir.tether.camera.DownloadedFile
 import studio.miroir.tether.camera.DriverOptions
+import studio.miroir.tether.camera.GenericDriver
 import studio.miroir.tether.camera.NikonDriver
 import studio.miroir.tether.camera.SonyDriver
 import studio.miroir.tether.image.Histogram
@@ -205,28 +206,83 @@ class PtpTest {
         assertEquals(1, out.files.size)
     }
 
-    @Test
-    fun nikonRawUsesLargePreviewWhenRawCopyIsOff() {
-        val preview = Random(7).nextBytes(400_000)
-        var events = ByteWriter().u16(1).u16(Ptp.EV_OBJECT_ADDED).u32(0x88L).toByteArray()
-        val cam = FakeCamera { cmd ->
-            when (cmd.code) {
-                Ptp.OP_NIKON_CHECK_EVENT -> FakeReply(data = events).also { events = ByteWriter().u16(0).toByteArray() }
-                Ptp.OP_GET_OBJECT_INFO -> FakeReply(data = FakeCamera.objectInfo("DSC_0002.NEF", 0x3000, 60_000_000))
-                Ptp.OP_NIKON_GET_LARGE_THUMB -> FakeReply(data = preview)
-                Ptp.OP_GET_OBJECT -> error("must not download full RAW")
-                else -> FakeReply()
+    private fun nikonCamera(
+        files: Map<Long, Pair<String, ByteArray>>,
+        events: () -> ByteArray,
+        downloaded: MutableList<Long>,
+    ) = FakeCamera { cmd ->
+        when (cmd.code) {
+            Ptp.OP_NIKON_CHECK_EVENT -> FakeReply(data = events())
+            Ptp.OP_GET_OBJECT_INFO -> files[cmd.params[0]]!!.let {
+                FakeReply(data = FakeCamera.objectInfo(it.first, if (it.first.endsWith("JPG")) Ptp.FMT_JPEG else 0x3000, it.second.size))
             }
+            Ptp.OP_GET_OBJECT -> { downloaded += cmd.params[0]; FakeReply(data = files[cmd.params[0]]!!.second) }
+            Ptp.OP_NIKON_GET_LARGE_THUMB -> error("should use the full RAW, not the small preview")
+            else -> FakeReply()
         }
-        cam.dataOutOps = emptySet() // 0x9207 is a plain command on Nikon
+    }.apply { dataOutOps = emptySet() }
+
+    private fun nikonEvents(vararg handles: Long): ByteArray {
+        val w = ByteWriter().u16(handles.size)
+        handles.forEach { w.u16(Ptp.EV_OBJECT_ADDED).u32(it) }
+        return w.toByteArray()
+    }
+
+    @Test
+    fun nikonRawOnlyDownloadsFullRawForSharpPreview() {
+        val nef = Random(7).nextBytes(600_000)
+        var ev = nikonEvents(0x88)
+        val downloaded = mutableListOf<Long>()
+        val cam = nikonCamera(mapOf(0x88L to ("_DSC0002.NEF" to nef)), { ev.also { ev = nikonEvents() } }, downloaded)
         val session = PtpSession(cam, log)
         session.openSession()
         val out = Collector()
         val d = CameraDriver.create(Ptp.USB_VENDOR_NIKON, session, log, out, DriverOptions(copyRaw = false))
         d.poll()
+        assertTrue("RAW waits for a possible JPEG", out.files.isEmpty())
+        Thread.sleep(GenericDriver.RAW_WAIT_MS + 100)
+        d.poll()
         assertEquals(1, out.files.size)
-        assertEquals(false, out.files[0].isFullFile)
-        assertArrayEquals(preview, out.files[0].data)
+        assertTrue(out.files[0].isFullFile)
+        assertArrayEquals(nef, out.files[0].data)
+    }
+
+    @Test
+    fun nikonRawPlusJpegSkipsTheRaw() {
+        val nef = Random(8).nextBytes(600_000)
+        val jpg = Random(9).nextBytes(100_000)
+        var ev = nikonEvents(0x90, 0x91)
+        val downloaded = mutableListOf<Long>()
+        val cam = nikonCamera(
+            mapOf(0x90L to ("_DSC0003.NEF" to nef), 0x91L to ("_DSC0003.JPG" to jpg)),
+            { ev.also { ev = nikonEvents() } }, downloaded,
+        )
+        val session = PtpSession(cam, log)
+        session.openSession()
+        val out = Collector()
+        val d = CameraDriver.create(Ptp.USB_VENDOR_NIKON, session, log, out, DriverOptions(copyRaw = false))
+        d.poll()
+        Thread.sleep(GenericDriver.RAW_WAIT_MS + 100)
+        d.poll()
+        assertEquals(listOf(0x91L), downloaded)
+        assertEquals(listOf("_DSC0003.JPG"), out.files.map { it.info.filename })
+    }
+
+    @Test
+    fun copyRawDownloadsJpegBeforeRaw() {
+        val nef = Random(10).nextBytes(300_000)
+        val jpg = Random(11).nextBytes(50_000)
+        var ev = nikonEvents(0xA0, 0xA1)
+        val downloaded = mutableListOf<Long>()
+        val cam = nikonCamera(
+            mapOf(0xA0L to ("_DSC0004.NEF" to nef), 0xA1L to ("_DSC0004.JPG" to jpg)),
+            { ev.also { ev = nikonEvents() } }, downloaded,
+        )
+        val session = PtpSession(cam, log)
+        session.openSession()
+        val d = CameraDriver.create(Ptp.USB_VENDOR_NIKON, session, log, Collector(), DriverOptions(copyRaw = true))
+        d.poll()
+        assertEquals(listOf(0xA1L, 0xA0L), downloaded)
     }
 
     private fun fakeJpeg(scanBytes: Int, seed: Int, exifThumb: ByteArray? = null): ByteArray {

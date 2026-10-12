@@ -95,6 +95,12 @@ open class GenericDriver(
     override val brand = "Camera"
     private val seen = HashSet<Long>()
 
+    /** File names (without extension) whose JPEG we already have — their RAW isn't needed for preview. */
+    private val jpegBases = HashSet<String>()
+
+    /** RAWs waiting briefly in case a matching JPEG (RAW+JPEG shooting) follows. */
+    private val pendingRaw = LinkedHashMap<Long, Pair<ObjectInfo, Long>>()
+
     override fun capture() {
         val r = session.retryBusy { session.transaction(Ptp.OP_INITIATE_CAPTURE, longArrayOf(0, 0)) }
         if (!r.ok) throw PtpException("Capture failed: ${Ptp.responseName(r.code)}", r.code)
@@ -102,44 +108,73 @@ open class GenericDriver(
 
     override fun poll() {
         handleEvents(drainInterruptEvents() + pollVendorEvents())
+        processPendingRaw()
     }
 
     protected open fun pollVendorEvents(): List<PtpEvent> = emptyList()
 
     protected fun handleEvents(events: List<PtpEvent>) {
+        val added = ArrayList<Pair<Long, ObjectInfo>>()
         for (e in events) {
-            when (e.code) {
-                Ptp.EV_OBJECT_ADDED -> {
-                    val h = e.param(0)
-                    if (seen.add(h)) fetch(h)
-                }
-                Ptp.EV_NIKON_OBJECT_ADDED_IN_SDRAM -> {
-                    val h = e.param(0).takeIf { it != 0L } ?: Ptp.NIKON_SDRAM_HANDLE
-                    fetch(h)
-                }
-                else -> log.log("Ignored $e")
+            val handle = when (e.code) {
+                Ptp.EV_OBJECT_ADDED -> e.param(0).takeIf { seen.add(it) }
+                Ptp.EV_NIKON_OBJECT_ADDED_IN_SDRAM -> e.param(0).takeIf { it != 0L } ?: Ptp.NIKON_SDRAM_HANDLE
+                else -> { log.log("Ignored $e"); null }
+            } ?: continue
+            val info = try {
+                session.getObjectInfo(handle)
+            } catch (ex: PtpException) {
+                log.log("ObjectInfo ${handle.hex8()} failed: ${ex.message}")
+                continue
+            }
+            log.log("New object: $info")
+            if (!info.isFolder) added += handle to info
+        }
+        // JPEGs first so the picture appears before a large RAW transfer.
+        for ((handle, info) in added.sortedBy { if (it.second.isRaw) 1 else 0 }) fetch(handle, info)
+    }
+
+    private fun base(info: ObjectInfo) = info.filename.substringBeforeLast('.').uppercase()
+
+    private fun fetch(handle: Long, info: ObjectInfo) {
+        if (info.isRaw) {
+            when {
+                options.copyRaw -> download(handle, info)
+                base(info) in jpegBases -> log.log("Skipping RAW ${info.filename}: JPEG already shown")
+                else -> pendingRaw[handle] = info to System.currentTimeMillis()
+            }
+            return
+        }
+        if (info.isJpeg) jpegBases += base(info)
+        download(handle, info)
+    }
+
+    private fun processPendingRaw() {
+        if (pendingRaw.isEmpty()) return
+        val now = System.currentTimeMillis()
+        val due = pendingRaw.entries.filter { now - it.value.second >= RAW_WAIT_MS }
+        for (entry in due) {
+            pendingRaw.remove(entry.key)
+            val info = entry.value.first
+            if (base(info) in jpegBases) {
+                log.log("Skipping RAW ${info.filename}: JPEG already shown")
+            } else {
+                fetchRawPreview(entry.key, info)
             }
         }
     }
 
-    private fun fetch(handle: Long) {
-        val info = try {
-            session.getObjectInfo(handle)
-        } catch (e: PtpException) {
-            log.log("ObjectInfo ${handle.hex8()} failed: ${e.message}")
-            return
-        }
-        log.log("New object: $info")
-        if (info.isFolder) return
-        if (info.isRaw && !options.copyRaw) {
-            fetchRawPreview(handle, info)
-            return
-        }
+    /**
+     * RAW-only shot with Copy RAW off: we still need a sharp preview, so download the RAW once —
+     * the app extracts the full-size JPEG embedded in it and doesn't keep the RAW file.
+     */
+    protected open fun fetchRawPreview(handle: Long, info: ObjectInfo) {
+        log.log("RAW-only shot ${info.filename}: downloading for its full-size embedded preview")
         download(handle, info)
     }
 
-    /** RAW not copied in full: get the camera's large preview instead, if it offers one. */
-    protected open fun fetchRawPreview(handle: Long, info: ObjectInfo) {
-        log.log("Skipping RAW ${info.filename} (Copy RAW is off)")
+    companion object {
+        /** How long to wait for the JPEG half of a RAW+JPEG pair before treating a RAW as RAW-only. */
+        const val RAW_WAIT_MS = 1500L
     }
 }
