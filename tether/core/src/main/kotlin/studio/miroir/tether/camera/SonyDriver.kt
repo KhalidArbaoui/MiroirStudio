@@ -156,20 +156,28 @@ class SonyDriver(
         refreshProps(force = true)
         val d = props[code] ?: return
         log.log("Step ${id.label} ${if (direction > 0) "+" else "-"}: now $d")
-
         // Exposure dials (shutter, aperture, EV) are moved by clicks, like libgphoto2 does on Sony.
-        if (id in dialSettings) {
-            stepByClick(id, code, d.current, direction)
-            return
+        if (id !in dialSettings) {
+            val target = targetFor(id, d, direction)
+            if (target != null) {
+                val r = session.transaction(
+                    Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
+                    dataOut = PropDescParser.encode(d.dataType, target),
+                )
+                log.log("Set ${id.label} = ${SettingFormat.format(id, code, target)}: $r")
+                if (r.ok && waitFor(code, 1200) { it == target } != null) return
+                log.log("${id.label}: absolute set ignored, trying dial clicks")
+            }
         }
-        val target = targetFor(id, d, direction) ?: return
-        val r = session.transaction(
-            Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
-            dataOut = PropDescParser.encode(d.dataType, target),
-        )
-        log.log("Set ${id.label} = ${SettingFormat.format(id, code, target)}: $r")
-        if (!r.ok || waitFor(code, 2000) { it == target } == null) {
-            throw PtpException("Camera didn't accept ${id.label} — check the camera's mode", Ptp.RC_GENERAL_ERROR)
+        try {
+            stepByClick(id, code, d.current, direction)
+        } catch (e: PtpException) {
+            if (d.enabled) throw e
+            throw PtpException(
+                if (id == SettingId.Aperture) "The camera has aperture locked — use an E-mount AF lens with its aperture ring on A"
+                else "The camera has ${id.label} locked right now (mode, custom key or open menu)",
+                e.responseCode,
+            )
         }
     }
 
@@ -181,12 +189,12 @@ class SonyDriver(
         if (now == null) {
             throw PtpException(
                 "${id.label} didn't change. Check: mode dial (M = all, A = aperture, S = shutter), " +
-                    "lens aperture ring on A, and that the camera isn't showing a menu.",
+                    "lens aperture ring on A, ISO not on a custom key lock, and no menu open on the camera.",
                 Ptp.RC_GENERAL_ERROR,
             )
         }
         val moved = settingKey(id, code, now) - before
-        if ((moved > 0) != (direction > 0)) {
+        if (moved != 0.0 && (moved > 0) != (direction > 0)) {
             log.log("${id.label}: dial runs the other way, correcting")
             clickSign[code] = -sign
             click(code, -sign * direction)

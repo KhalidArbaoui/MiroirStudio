@@ -122,4 +122,37 @@ class SettingsTest {
         d.stepSetting(SettingId.Aperture, -1)
         assertEquals("f/5.6", d.readSettings().first { it.id == SettingId.Aperture }.display)
     }
+
+    @Test
+    fun sonyIsoFallsBackToClicksWhenAbsoluteSetIsIgnored() {
+        val isos = listOf(100L, 200L, 400L, 800L)
+        var idx = 1
+        var absoluteCalls = 0
+        fun props(): ByteArray {
+            val w = ByteWriter()
+            w.u32(1L).u32(0L)
+            w.u16(Ptp.SONY_PROP_ISO).u16(6).u8(1).u8(1).u32(100L).u32(isos[idx])
+            w.u8(2).u16(isos.size); isos.forEach { w.u32(it) }
+            return w.toByteArray()
+        }
+        val cam = FakeCamera { cmd ->
+            when (cmd.code) {
+                Ptp.OP_SONY_SDIO_CONNECT, Ptp.OP_SONY_GET_EXT_DEVICE_INFO -> FakeReply(data = ByteArray(8))
+                Ptp.OP_SONY_GET_ALL_DEVICE_PROP_DATA -> FakeReply(data = props())
+                Ptp.OP_SONY_SET_CONTROL_DEVICE_A -> { absoluteCalls++; FakeReply() } // accepted, but ignored
+                Ptp.OP_SONY_SET_CONTROL_DEVICE_B -> {
+                    idx = (idx + if (cmd.dataOut!![0].toInt() == 1) 1 else -1).coerceIn(0, 3)
+                    FakeReply()
+                }
+                else -> FakeReply()
+            }
+        }
+        val session = PtpSession(cam, log)
+        session.openSession()
+        val d = CameraDriver.create(Ptp.USB_VENDOR_SONY, session, log, noFiles, DriverOptions())
+        d.connect()
+        d.stepSetting(SettingId.Iso, +1)
+        assertEquals("ISO 400", d.readSettings().first { it.id == SettingId.Iso }.display)
+        assertTrue(absoluteCalls >= 1)
+    }
 }

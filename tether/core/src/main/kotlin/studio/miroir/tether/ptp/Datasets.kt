@@ -100,6 +100,8 @@ class PropDesc(
     val enumValues: List<Long>,
     /** Range form (min, max, step), if the camera reports one. */
     val range: Triple<Long, Long, Long>?,
+    /** Sony only: false when the camera currently locks this setting (lens, mode, menu). */
+    val enabled: Boolean = true,
 ) {
     /** Allowed values: the enumeration, or the range expanded (when it's a sensible size). */
     val allowedValues: List<Long>
@@ -110,7 +112,8 @@ class PropDesc(
             return (min..max step step).toList()
         }
 
-    override fun toString() = "${code.hex4()}=${currentString ?: current} (${enumValues.size} values${if (range != null) ", range" else ""})"
+    override fun toString() = "${code.hex4()}=${currentString ?: current} type=${dataType.hex4()} set=$writable on=$enabled " +
+        "(${enumValues.size} values${if (range != null) ", range" else ""})"
 }
 
 object PropDescParser {
@@ -138,7 +141,7 @@ object PropDescParser {
         val code = r.u16()
         val type = r.u16()
         val getSet = r.u8()
-        if (sony) r.u8() // is enabled
+        val enabled = if (sony) r.u8() != 0 else true
         readValue(r, type) // factory default
         val (cur, curStr) = readValue(r, type)
         var enum = emptyList<Long>()
@@ -149,7 +152,7 @@ object PropDescParser {
                 2 -> { val n = r.u16(); enum = List(n) { readValue(r, type).first } }
             }
         }
-        return PropDesc(code, type, getSet == 1, cur, curStr, enum, range)
+        return PropDesc(code, type, getSet == 1, cur, curStr, enum, range, enabled)
     }
 
     fun scalarSize(type: Int): Int = when (type) {
