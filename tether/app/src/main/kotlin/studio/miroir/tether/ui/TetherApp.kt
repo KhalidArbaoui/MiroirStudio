@@ -45,6 +45,7 @@ import studio.miroir.tether.tether.LinkState
 import studio.miroir.tether.tether.PreviewSource
 import studio.miroir.tether.tether.TetherViewModel
 import studio.miroir.tether.tether.Tool
+import studio.miroir.tether.tether.matches
 
 @Composable
 fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
@@ -62,6 +63,10 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val follow by vm.followNewest.collectAsStateWithLifecycle()
         val copyRaw by vm.copyRaw.collectAsStateWithLifecycle()
         val log by AppLog.text.collectAsStateWithLifecycle()
+        val filter by vm.filter.collectAsStateWithLifecycle()
+        val settings by vm.settings.collectAsStateWithLifecycle()
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val visibleShots = shots.filter { filter.matches(it) }
 
         var showGuide by rememberSaveable { mutableStateOf(false) }
         var showLog by rememberSaveable { mutableStateOf(false) }
@@ -86,6 +91,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
 
         val controls: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CameraPanel(settings, vm::stepSetting)
                 HistogramView(analysis?.histogram)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ToolButton("Clipping", showClipping, { vm.showClipping.value = !showClipping }, Modifier.weight(1f))
@@ -109,7 +115,15 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                         Row(Modifier.weight(1f)) {
                             Column(Modifier.weight(1f)) {
                                 viewer(Modifier.weight(1f).fillMaxWidth())
-                                InfoBar(selected?.baseName, selected?.source, analysis?.exif, onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) })
+                                InfoBar(
+                                    selected?.baseName, selected?.source, analysis?.exif,
+                                    onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
+                                    rating = {
+                                        selected?.let { shot ->
+                                            RatingControls(shot.rating, shot.pick, { vm.setRating(shot.id, it) }, { vm.togglePick(shot.id) })
+                                        }
+                                    },
+                                )
                             }
                             Column(
                                 Modifier.width(320.dp).fillMaxHeight().background(C.Panel).padding(16.dp),
@@ -122,7 +136,15 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                         }
                     } else {
                         viewer(Modifier.weight(1f).fillMaxWidth())
-                        InfoBar(selected?.baseName, selected?.source, analysis?.exif, onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) })
+                        InfoBar(
+                                    selected?.baseName, selected?.source, analysis?.exif,
+                                    onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
+                                    rating = {
+                                        selected?.let { shot ->
+                                            RatingControls(shot.rating, shot.pick, { vm.setRating(shot.id, it) }, { vm.togglePick(shot.id) })
+                                        }
+                                    },
+                                )
                         Row(
                             Modifier.fillMaxWidth().background(C.Panel).padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -135,7 +157,22 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                             ShutterButton(connected, vm::capture)
                         }
                     }
-                    Filmstrip(shots, selectedId, vm::select)
+                    if (shots.isNotEmpty()) {
+                        FilterBar(
+                            shots, filter, { vm.filter.value = it }, vm::exportPicks,
+                            onShareList = {
+                                val list = vm.pickList()
+                                if (list.isEmpty()) {
+                                    android.widget.Toast.makeText(context, "No picks yet", android.widget.Toast.LENGTH_SHORT).show()
+                                } else {
+                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                        .putExtra(android.content.Intent.EXTRA_TEXT, list)
+                                    context.startActivity(android.content.Intent.createChooser(send, "Pick list for Lightroom"))
+                                }
+                            },
+                        )
+                    }
+                    Filmstrip(visibleShots, selectedId, vm::select)
                 }
             }
 
@@ -188,6 +225,7 @@ private fun InfoBar(
     exif: studio.miroir.tether.tether.ExifSummary?,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    rating: @Composable () -> Unit = {},
 ) {
     Row(
         Modifier.fillMaxWidth().background(C.Ink).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -213,6 +251,8 @@ private fun InfoBar(
                 )
             }
         }
+        rating()
+        Spacer(Modifier.width(8.dp))
         TextButton(onClick = onNext) { Text("›", color = C.Cream, fontSize = 22.sp) }
     }
 }

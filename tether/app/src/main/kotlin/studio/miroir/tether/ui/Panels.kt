@@ -42,7 +42,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import studio.miroir.tether.camera.CameraSetting
+import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.image.Histogram
+import studio.miroir.tether.tether.ShotFilter
+import studio.miroir.tether.tether.matches
 import studio.miroir.tether.tether.CameraStatus
 import studio.miroir.tether.tether.LinkState
 import studio.miroir.tether.tether.PreviewSource
@@ -128,6 +132,10 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
             ) {
                 shot.thumb?.let {
                     Image(it.asImageBitmap(), shot.baseName, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
+                }
+                Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (shot.pick) Badge("♥", C.Gold)
+                    if (shot.rating > 0) Badge("★${shot.rating}", C.Gold)
                 }
                 Row(Modifier.align(Alignment.BottomStart).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     if (shot.jpegFile != null) Badge("J")
@@ -217,5 +225,92 @@ fun ToolButton(label: String, active: Boolean, onClick: () -> Unit, modifier: Mo
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(label, color = if (active) C.Gold else C.Cream, fontSize = 13.sp, maxLines = 1)
+    }
+}
+
+/** Filter chips and pick actions above the filmstrip. */
+@Composable
+fun FilterBar(
+    shots: List<Shot>,
+    filter: ShotFilter,
+    onFilter: (ShotFilter) -> Unit,
+    onExport: () -> Unit,
+    onShareList: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().background(C.Panel).padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (f in ShotFilter.entries) {
+            val n = shots.count { f.matches(it) }
+            val on = f == filter
+            Text(
+                "${f.label} $n", color = if (on) C.Ink else C.Cream, fontSize = 12.sp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) C.Gold else C.Raised)
+                    .clickable { onFilter(f) }.padding(horizontal = 12.dp, vertical = 5.dp),
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Text(
+            "Copy pick list", color = C.Cream, fontSize = 12.sp,
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShareList).padding(horizontal = 10.dp, vertical = 5.dp),
+        )
+        Text(
+            "Save picks to Gallery", color = C.Gold, fontSize = 12.sp,
+            modifier = Modifier.clip(RoundedCornerShape(50)).border(1.dp, C.Gold, RoundedCornerShape(50))
+                .clickable(onClick = onExport).padding(horizontal = 12.dp, vertical = 5.dp),
+        )
+    }
+}
+
+/** ★★★★★ and ♥ for the selected shot. */
+@Composable
+fun RatingControls(rating: Int, pick: Boolean, onRate: (Int) -> Unit, onPick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        for (i in 1..5) {
+            Text(
+                if (i <= rating) "★" else "☆", color = if (i <= rating) C.Gold else C.Muted, fontSize = 22.sp,
+                modifier = Modifier.clip(CircleShape).clickable { onRate(i) }.padding(horizontal = 3.dp),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            if (pick) "♥ Pick" else "♡ Pick", color = if (pick) C.Ink else C.Cream, fontSize = 14.sp,
+            modifier = Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.Gold else C.Raised)
+                .clickable(onClick = onPick).padding(horizontal = 12.dp, vertical = 5.dp),
+        )
+    }
+}
+
+/** Exposure settings with ‹ › steppers. */
+@Composable
+fun CameraPanel(settings: List<CameraSetting>, onStep: (SettingId, Int) -> Unit) {
+    if (settings.isEmpty()) return
+    Column(
+        Modifier.fillMaxWidth().background(C.Raised, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        Text("CAMERA", color = C.Muted, fontSize = 10.sp, letterSpacing = 1.sp, modifier = Modifier.padding(vertical = 4.dp))
+        for (s in settings) {
+            Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(s.id.label, color = C.Muted, fontSize = 12.sp, modifier = Modifier.width(72.dp))
+                if (s.adjustable) StepButton("‹") { onStep(s.id, -1) }
+                Text(
+                    s.display, color = C.Cream, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
+                )
+                if (s.adjustable) StepButton("›") { onStep(s.id, 1) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepButton(label: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(38.dp).clip(CircleShape).background(C.Panel).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = C.Gold, fontSize = 22.sp)
     }
 }

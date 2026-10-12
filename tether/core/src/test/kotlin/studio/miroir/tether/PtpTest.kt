@@ -20,7 +20,7 @@ import studio.miroir.tether.ptp.ByteWriter
 import studio.miroir.tether.ptp.NikonEvents
 import studio.miroir.tether.ptp.Ptp
 import studio.miroir.tether.ptp.PtpSession
-import studio.miroir.tether.ptp.SonyPropertyParser
+import studio.miroir.tether.ptp.PropDescParser
 import studio.miroir.tether.ptp.TetherLog
 import kotlin.random.Random
 
@@ -132,7 +132,7 @@ class PtpTest {
 
     @Test
     fun sonyPropertiesParse() {
-        val p = SonyPropertyParser.parse(sonyProps(0x8001))
+        val p = PropDescParser.parseSonyAll(sonyProps(0x8001))
         assertEquals(3, p.size)
         assertEquals(4L, p[0x5005]!!.current)
         assertEquals("abc", p[0xD2FF]!!.currentString)

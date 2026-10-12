@@ -1,6 +1,8 @@
 package studio.miroir.tether.camera
 
 import studio.miroir.tether.ptp.ObjectInfo
+import studio.miroir.tether.ptp.PropDesc
+import studio.miroir.tether.ptp.PropDescParser
 import studio.miroir.tether.ptp.Ptp
 import studio.miroir.tether.ptp.PtpEvent
 import studio.miroir.tether.ptp.PtpException
@@ -54,6 +56,42 @@ abstract class CameraDriver(
 
     /** Check for new images and download them. Called every ~150 ms. */
     abstract fun poll()
+
+    /** Current exposure settings, for the tablet's camera panel. */
+    open fun readSettings(): List<CameraSetting> = emptyList()
+
+    /** Moves a setting one step: +1 = faster shutter / higher f-number / higher ISO / more EV / warmer K. */
+    open fun stepSetting(id: SettingId, direction: Int) {}
+
+    /** Sort key so "+1" always means the same thing whatever order the camera lists values in. */
+    protected fun settingKey(id: SettingId, code: Int, v: Long): Double = when (id) {
+        SettingId.Shutter -> {
+            val seconds = if (code == Ptp.PROP_EXPOSURE_TIME) {
+                if (v == 0xFFFFFFFFL) 1e9 else v / 10000.0
+            } else {
+                val den = v and 0xFFFF
+                if (v == 0L || v >= 0xFFFFFFFEL || den == 0L) 1e9 else ((v ushr 16) and 0xFFFF).toDouble() / den
+            }
+            -seconds
+        }
+        SettingId.Iso -> if ((v and 0xFFFFFF) == 0xFFFFFFL) 1e9 else (v and 0xFFFFFF).toDouble()
+        SettingId.ExposureComp -> v.toInt().toShort().toDouble()
+        SettingId.Mode, SettingId.WhiteBalance -> 0.0 // keep camera order
+        else -> v.toDouble()
+    }
+
+    protected fun orderedValues(id: SettingId, d: PropDesc): List<Long> {
+        val values = d.allowedValues
+        return if (id == SettingId.Mode || id == SettingId.WhiteBalance) values
+        else values.sortedBy { settingKey(id, d.code, it) }
+    }
+
+    protected fun targetFor(id: SettingId, d: PropDesc, direction: Int): Long? =
+        if (id == SettingId.ColorTemp) SettingFormat.kelvinNeighbor(d, direction)
+        else SettingFormat.neighbor(orderedValues(id, d), d.current, direction)
+
+    protected fun toSetting(id: SettingId, d: PropDesc, adjustable: Boolean = d.writable) =
+        CameraSetting(id, SettingFormat.format(id, d.code, d.current), adjustable && id != SettingId.Mode)
 
     /** Battery percentage if the camera reports it. */
     open fun batteryLevel(): Int? = runCatching {
@@ -171,6 +209,56 @@ open class GenericDriver(
     protected open fun fetchRawPreview(handle: Long, info: ObjectInfo) {
         log.log("RAW-only shot ${info.filename}: downloading for its full-size embedded preview")
         download(handle, info)
+    }
+
+    // ---------------------------------------------------------------- settings (standard PTP)
+
+    /** Property codes per setting, best first. Nikon vendor codes are tried before standard ones. */
+    protected open val settingCodes: Map<SettingId, List<Int>> = mapOf(
+        SettingId.Mode to listOf(Ptp.PROP_EXPOSURE_PROGRAM),
+        SettingId.Shutter to listOf(Ptp.NIKON_PROP_EXPOSURE_TIME, Ptp.PROP_EXPOSURE_TIME),
+        SettingId.Aperture to listOf(Ptp.PROP_F_NUMBER),
+        SettingId.Iso to listOf(Ptp.PROP_EXPOSURE_INDEX),
+        SettingId.ExposureComp to listOf(Ptp.PROP_EXPOSURE_BIAS),
+        SettingId.WhiteBalance to listOf(Ptp.PROP_WHITE_BALANCE),
+        SettingId.ColorTemp to listOf(Ptp.NIKON_PROP_COLOR_TEMPERATURE),
+    )
+    private val resolvedCodes = HashMap<SettingId, Int?>()
+    private val descs = LinkedHashMap<SettingId, PropDesc>()
+
+    private fun readDesc(code: Int): PropDesc? {
+        val r = session.retryBusy(attempts = 5) { session.transaction(Ptp.OP_GET_DEVICE_PROP_DESC, longArrayOf(code.toLong())) }
+        return if (r.ok) runCatching { PropDescParser.parse(r.data) }.getOrNull() else null
+    }
+
+    private fun codeFor(id: SettingId): Int? {
+        if (resolvedCodes.containsKey(id)) return resolvedCodes[id]
+        val code = settingCodes[id].orEmpty().firstOrNull { readDesc(it) != null }
+        log.log("Setting ${id.label}: ${code?.let { "0x%04X".format(it) } ?: "not available"}")
+        resolvedCodes[id] = code
+        return code
+    }
+
+    override fun readSettings(): List<CameraSetting> {
+        for (id in SettingId.entries) {
+            val code = codeFor(id) ?: continue
+            readDesc(code)?.let { descs[id] = it }
+        }
+        val kelvinMode = descs[SettingId.WhiteBalance]?.current == 0x8012L
+        return descs.filterKeys { it != SettingId.ColorTemp || kelvinMode }.map { (id, d) -> toSetting(id, d) }
+    }
+
+    override fun stepSetting(id: SettingId, direction: Int) {
+        val code = codeFor(id) ?: return
+        val d = readDesc(code) ?: return
+        if (!d.writable) throw PtpException("${id.label} can't be changed now — check the camera's mode", Ptp.RC_GENERAL_ERROR)
+        val target = targetFor(id, d, direction) ?: return
+        val r = session.retryBusy {
+            session.transaction(Ptp.OP_SET_DEVICE_PROP_VALUE, longArrayOf(code.toLong()), dataOut = PropDescParser.encode(d.dataType, target))
+        }
+        if (!r.ok) throw PtpException("Camera refused ${id.label} (${Ptp.responseName(r.code)}) — check the camera's mode", r.code)
+        readDesc(code)?.let { descs[id] = it }
+        log.log("${id.label} → ${SettingFormat.format(id, code, target)}")
     }
 
     companion object {

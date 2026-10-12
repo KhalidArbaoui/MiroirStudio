@@ -1,7 +1,10 @@
 package studio.miroir.tether.tether
 
 import android.app.Application
+import android.content.ContentValues
 import android.content.Context
+import android.os.Build
+import android.provider.MediaStore
 import android.graphics.Bitmap
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
@@ -17,6 +20,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import studio.miroir.tether.camera.CameraDriver
 import studio.miroir.tether.camera.CameraListener
+import studio.miroir.tether.camera.CameraSetting
+import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.camera.DownloadedFile
 import studio.miroir.tether.camera.DriverOptions
 import studio.miroir.tether.image.JpegExtractor
@@ -59,7 +64,17 @@ data class Shot(
     val thumb: Bitmap? = null,
     val exif: ExifSummary = ExifSummary(),
     val version: Int = 0,
+    val rating: Int = 0,
+    val pick: Boolean = false,
 )
+
+enum class ShotFilter(val label: String) { All("All"), Picks("Picks"), Rated("★3+") }
+
+fun ShotFilter.matches(s: Shot) = when (this) {
+    ShotFilter.All -> true
+    ShotFilter.Picks -> s.pick
+    ShotFilter.Rated -> s.rating >= 3
+}
 
 data class Transfer(val filename: String, val done: Long, val total: Long) {
     val fraction: Float get() = if (total > 0) done.toFloat() / total else 0f
@@ -92,6 +107,13 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     val showClipping = MutableStateFlow(true)
     val tool = MutableStateFlow(Tool.None)
     val copyRaw = MutableStateFlow(prefs.getBoolean("copyRaw", false))
+
+    val filter = MutableStateFlow(ShotFilter.All)
+
+    private val _settings = MutableStateFlow<List<CameraSetting>>(emptyList())
+    val settings: StateFlow<List<CameraSetting>> = _settings
+    private val settingRequests = ConcurrentLinkedQueue<Pair<SettingId, Int>>()
+    private val exported = HashSet<Long>()
 
     private val _loupe = MutableStateFlow<Bitmap?>(null)
     val loupe: StateFlow<Bitmap?> = _loupe
@@ -151,6 +173,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
 
             val events = startEventReader(transport, driver)
             var lastBattery = 0L
+            var lastSettings = 0L
             var failures = 0
             while (running.get()) {
                 try {
@@ -158,8 +181,22 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                         AppLog.log("Capture requested")
                         driver.capture()
                     }
+                    val step = settingRequests.poll()
+                    if (step != null) {
+                        try {
+                            driver.stepSetting(step.first, step.second)
+                        } catch (e: PtpException) {
+                            AppLog.log("Setting ${step.first.label}: ${e.message}")
+                            showToast(e.message ?: "Camera refused the change")
+                        }
+                        lastSettings = 0L
+                    }
                     driver.poll()
                     val now = System.currentTimeMillis()
+                    if (now - lastSettings > 1500) {
+                        lastSettings = now
+                        _settings.value = driver.readSettings()
+                    }
                     if (now - lastBattery > 30_000) {
                         lastBattery = now
                         val level = driver.batteryLevel()
@@ -176,6 +213,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                 Thread.sleep(120)
             }
             events.interrupt()
+            _settings.value = emptyList()
             session.closeSession()
             _status.value = CameraStatus(LinkState.Disconnected, message = "Disconnected")
         } catch (t: Throwable) {
@@ -235,6 +273,69 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
 
     fun capture() {
         if (_status.value.state == LinkState.Connected) captureRequests.add(Unit)
+    }
+
+    fun stepSetting(id: SettingId, direction: Int) {
+        if (_status.value.state == LinkState.Connected) settingRequests.add(id to direction)
+    }
+
+    // ---------------------------------------------------------------- ratings & picks
+
+    fun setRating(id: Long, rating: Int) {
+        update(id) { it.copy(rating = if (it.rating == rating) 0 else rating) }
+        saveRatings()
+    }
+
+    fun togglePick(id: Long) {
+        update(id) { it.copy(pick = !it.pick) }
+        saveRatings()
+    }
+
+    private fun saveRatings() {
+        val lines = _shots.value.filter { it.rating > 0 || it.pick }
+            .joinToString("\n") { "${it.baseName}\t${it.rating}\t${if (it.pick) 1 else 0}" }
+        ioThread.execute { runCatching { File(sessionDir, "ratings.txt").writeText(lines) } }
+    }
+
+    /** File names of the picks, space-separated — paste into Lightroom's Library Filter (Text → Filename → Contains). */
+    fun pickList(): String = _shots.value.filter { it.pick }.joinToString(" ") { it.baseName }
+
+    /** Copies the picked JPEGs into the Samsung Gallery (Pictures/MIROIR Tether/<session>). */
+    fun exportPicks() {
+        val picks = _shots.value.filter { it.pick && it.id !in exported }
+        if (picks.isEmpty()) {
+            showToast(if (_shots.value.any { it.pick }) "All picks are already in the Gallery" else "No picks yet — tap ♥ on your best shots")
+            return
+        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            showToast("Saving to Gallery needs Android 10 or newer")
+            return
+        }
+        ioThread.execute {
+            val resolver = getApplication<Application>().contentResolver
+            var n = 0
+            for (shot in picks) {
+                try {
+                    val src = shot.jpegFile ?: shot.previewFile
+                    val values = ContentValues().apply {
+                        put(MediaStore.Images.Media.DISPLAY_NAME, shot.baseName + ".jpg")
+                        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/MIROIR Tether/${sessionDir.name}")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                    val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: continue
+                    resolver.openOutputStream(uri)?.use { out -> src.inputStream().use { it.copyTo(out) } }
+                    values.clear()
+                    values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+                    synchronized(exported) { exported += shot.id }
+                    n++
+                } catch (t: Throwable) {
+                    AppLog.error("Export ${shot.baseName}", t)
+                }
+            }
+            showToast("$n pick${if (n == 1) "" else "s"} saved to Gallery › MIROIR Tether")
+        }
     }
 
     fun setCopyRaw(on: Boolean) {

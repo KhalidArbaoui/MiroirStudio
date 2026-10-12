@@ -4,7 +4,7 @@ USB tethering for Android tablets, built for MIROIR Studio's food and product wo
 Shoot on a **Nikon Z8** or **Sony A7 III** and every frame appears on the Samsung tablet in seconds,
 with exposure and colour tools so the tablet shows what Lightroom will show.
 
-## Phase 1 — features
+## Features
 
 | Feature | Details |
 |---|---|
@@ -19,6 +19,10 @@ with exposure and colour tools so the tablet shows what Lightroom will show.
 | Neutral viewer | Black / grey / light neutral backgrounds for judging colour. |
 | EXIF bar | Shutter, aperture, ISO, EV, focal length, WB, lens; warns if the JPEG is Adobe RGB. |
 | Log | Built-in connection log with a Share button — send it when something fails. |
+| Ratings & picks | ★1–5 and ♥ pick per shot, filters (All / Picks / ★3+). Saved in the session folder. |
+| Save picks to Gallery | Copies picked JPEGs to the Samsung Gallery album *MIROIR Tether/<session>*. |
+| Pick list for Lightroom | Shares the picked file names; paste into Lightroom Library Filter → Text → Filename → Contains, select all, rate. |
+| Camera control | ISO, shutter, aperture, exposure comp, WB (and Kelvin) with ‹ › steppers. The camera's exposure mode decides what can change (M = all, A = aperture, S = shutter). |
 
 Photos are saved on the tablet in `Android/data/studio.miroir.tether/files/Pictures/MIROIR Tether/<session>/`.
 
@@ -63,5 +67,5 @@ before publishing to Google Play.
 
 ## Roadmap
 
-- **Phase 2:** live view on the tablet; change ISO / shutter / aperture / WB from the tablet; star ratings;
-  export picks to the Samsung Gallery; Lightroom-matching correction profile calibrated from a ColorChecker.
+- **Phase 2c:** live view on the tablet with tap-to-focus.
+- **Phase 2d:** Lightroom-matching correction profile calibrated from a ColorChecker.

@@ -18,7 +18,9 @@ object Ptp {
     const val OP_GET_OBJECT = 0x1009
     const val OP_GET_THUMB = 0x100A
     const val OP_INITIATE_CAPTURE = 0x100E
+    const val OP_GET_DEVICE_PROP_DESC = 0x1014
     const val OP_GET_DEVICE_PROP_VALUE = 0x1015
+    const val OP_SET_DEVICE_PROP_VALUE = 0x1016
     const val OP_GET_PARTIAL_OBJECT = 0x101B
 
     // Nikon vendor operations
@@ -60,7 +62,22 @@ object Ptp {
     const val FMT_TIFF = 0x380D
     const val FMT_SONY_ARW = 0xB101
 
+    // Standard properties
+    const val PROP_WHITE_BALANCE = 0x5005
+    const val PROP_F_NUMBER = 0x5007
+    const val PROP_EXPOSURE_TIME = 0x500D
+    const val PROP_EXPOSURE_PROGRAM = 0x500E
+    const val PROP_EXPOSURE_INDEX = 0x500F
+    const val PROP_EXPOSURE_BIAS = 0x5010
+
+    // Nikon properties
+    const val NIKON_PROP_COLOR_TEMPERATURE = 0xD01E
+    const val NIKON_PROP_EXPOSURE_TIME = 0xD100
+
     // Sony properties / control codes
+    const val SONY_PROP_SHUTTER = 0xD20D
+    const val SONY_PROP_COLOR_TEMPERATURE = 0xD20F
+    const val SONY_PROP_ISO = 0xD21E
     const val SONY_PROP_OBJECT_IN_MEMORY = 0xD215
     const val SONY_PROP_BATTERY = 0xD218
     const val SONY_CTRL_S1_HALF_PRESS = 0xD2C1
@@ -80,7 +97,8 @@ object Ptp {
         0x2001 to "OK", 0x2002 to "GeneralError", 0x2003 to "SessionNotOpen",
         0x2004 to "InvalidTransactionID", 0x2005 to "OperationNotSupported",
         0x2006 to "ParameterNotSupported", 0x2007 to "IncompleteTransfer",
-        0x2009 to "InvalidObjectHandle", 0x200C to "StoreFull", 0x200F to "AccessDenied",
+        0x2009 to "InvalidObjectHandle", 0x200A to "InvalidDevicePropFormat", 0x200B to "InvalidDevicePropValue",
+        0x2013 to "DevicePropNotSupported", 0x200C to "StoreFull", 0x200F to "AccessDenied",
         0x2019 to "DeviceBusy", 0x201D to "InvalidParameter", 0x201E to "SessionAlreadyOpen",
         0xA002 to "Nikon:OutOfFocus", 0xA00B to "Nikon:NotLiveView",
     )

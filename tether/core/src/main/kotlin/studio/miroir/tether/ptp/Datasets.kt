@@ -86,37 +86,73 @@ class ObjectInfo(
     }
 }
 
-/** Device property value as reported by Sony's GetAllDevicePropData (0x9209). */
-class SonyProperty(val code: Int, val dataType: Int, val current: Long, val currentString: String?)
+/**
+ * A device property descriptor (PTP DevicePropDesc), from GetDevicePropDesc (0x1014)
+ * or one entry of Sony's GetAllDevicePropData (0x9209).
+ */
+class PropDesc(
+    val code: Int,
+    val dataType: Int,
+    val writable: Boolean,
+    val current: Long,
+    val currentString: String?,
+    /** Allowed values from an enumeration form, in camera order. */
+    val enumValues: List<Long>,
+    /** Range form (min, max, step), if the camera reports one. */
+    val range: Triple<Long, Long, Long>?,
+) {
+    /** Allowed values: the enumeration, or the range expanded (when it's a sensible size). */
+    val allowedValues: List<Long>
+        get() {
+            if (enumValues.isNotEmpty()) return enumValues
+            val (min, max, step) = range ?: return emptyList()
+            if (step <= 0 || (max - min) / step > 2000) return emptyList()
+            return (min..max step step).toList()
+        }
 
-object SonyPropertyParser {
+    override fun toString() = "${code.hex4()}=${currentString ?: current} (${enumValues.size} values${if (range != null) ", range" else ""})"
+}
+
+object PropDescParser {
+    /** Standard DevicePropDesc: code, type, getSet, default, current, formFlag, form. */
+    fun parse(data: ByteArray): PropDesc = parseOne(ByteReader(data), sony = false)
+
     /**
-     * Parses the 0x9209 dataset: u64 count, then Sony device property descriptors:
-     * code u16, type u16, getSet u8, isEnabled u8, default value, current value, form flag u8, form.
+     * Sony 0x9209 dataset: u64 count, then descriptors that carry one extra byte
+     * ("is enabled") after getSet.
      */
-    fun parse(data: ByteArray): Map<Int, SonyProperty> {
+    fun parseSonyAll(data: ByteArray): Map<Int, PropDesc> {
         val r = ByteReader(data)
         val count = r.u64()
-        val out = HashMap<Int, SonyProperty>()
+        val out = HashMap<Int, PropDesc>()
         var i = 0L
         while (i < count && r.remaining >= 6) {
-            val code = r.u16()
-            val type = r.u16()
-            r.u8() // get/set
-            r.u8() // is enabled
-            skipValue(r, type) // factory default
-            val (cur, curStr) = readValue(r, type)
-            when (r.u8()) { // form flag
-                1 -> repeat(3) { skipValue(r, type) } // range: min, max, step
-                2 -> { val n = r.u16(); repeat(n) { skipValue(r, type) } } // enum
-            }
-            out[code] = SonyProperty(code, type, cur, curStr)
+            val d = parseOne(r, sony = true)
+            out[d.code] = d
             i++
         }
         return out
     }
 
-    private fun scalarSize(type: Int): Int = when (type) {
+    private fun parseOne(r: ByteReader, sony: Boolean): PropDesc {
+        val code = r.u16()
+        val type = r.u16()
+        val getSet = r.u8()
+        if (sony) r.u8() // is enabled
+        readValue(r, type) // factory default
+        val (cur, curStr) = readValue(r, type)
+        var enum = emptyList<Long>()
+        var range: Triple<Long, Long, Long>? = null
+        if (r.remaining > 0) {
+            when (r.u8()) { // form flag
+                1 -> range = Triple(readValue(r, type).first, readValue(r, type).first, readValue(r, type).first)
+                2 -> { val n = r.u16(); enum = List(n) { readValue(r, type).first } }
+            }
+        }
+        return PropDesc(code, type, getSet == 1, cur, curStr, enum, range)
+    }
+
+    fun scalarSize(type: Int): Int = when (type) {
         1, 2 -> 1
         3, 4 -> 2
         5, 6 -> 4
@@ -142,7 +178,18 @@ object SonyPropertyParser {
         return v to null
     }
 
-    private fun skipValue(r: ByteReader, type: Int) { readValue(r, type) }
+    /** Encodes [value] as the little-endian bytes of PTP data [type] (for SetDevicePropValue). */
+    fun encode(type: Int, value: Long): ByteArray {
+        val w = ByteWriter(8)
+        when (scalarSize(type)) {
+            1 -> w.u8(value.toInt())
+            2 -> w.u16(value.toInt())
+            4 -> w.u32(value)
+            8 -> { w.u32(value and 0xFFFFFFFFL); w.u32(value ushr 32) }
+            else -> throw PtpException("Can't encode type ${type.hex4()}")
+        }
+        return w.toByteArray()
+    }
 }
 
 object NikonEvents {
