@@ -115,6 +115,16 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     private val settingRequests = ConcurrentLinkedQueue<Pair<SettingId, Int>>()
     private val exported = HashSet<Long>()
 
+    /** Live view the user asked for; the camera thread starts/stops it to match. */
+    val liveViewWanted = MutableStateFlow(false)
+    private val _liveFrame = MutableStateFlow<Bitmap?>(null)
+    val liveFrame: StateFlow<Bitmap?> = _liveFrame
+    private val _liveHistogram = MutableStateFlow<studio.miroir.tether.image.Histogram?>(null)
+    val liveHistogram: StateFlow<studio.miroir.tether.image.Histogram?> = _liveHistogram
+    private val _liveSupported = MutableStateFlow(false)
+    val liveSupported: StateFlow<Boolean> = _liveSupported
+    private val afRequests = ConcurrentLinkedQueue<Unit>()
+
     private val _loupe = MutableStateFlow<Bitmap?>(null)
     val loupe: StateFlow<Bitmap?> = _loupe
 
@@ -172,6 +182,10 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             AppLog.log("Connected to ${driver.brand} ${info.model}")
 
             val events = startEventReader(transport, driver)
+            _liveSupported.value = driver.supportsLiveView
+            var liveActive = false
+            var liveFailures = 0
+            var lastHistogram = 0L
             var lastBattery = 0L
             var lastSettings = 0L
             var failures = 0
@@ -191,6 +205,51 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                         }
                         lastSettings = 0L
                     }
+                    if (afRequests.poll() != null) {
+                        try { driver.autofocus() } catch (e: PtpException) { showToast(e.message ?: "Autofocus failed") }
+                    }
+
+                    // Live view: follow the toggle, then pull one frame per loop.
+                    val wantLive = liveViewWanted.value && driver.supportsLiveView
+                    if (wantLive != liveActive) {
+                        if (wantLive) {
+                            try {
+                                driver.startLiveView()
+                                liveActive = true
+                                liveFailures = 0
+                            } catch (e: PtpException) {
+                                liveViewWanted.value = false
+                                showToast(e.message ?: "Live view didn't start")
+                            }
+                        } else {
+                            driver.stopLiveView()
+                            liveActive = false
+                            _liveFrame.value = null
+                            _liveHistogram.value = null
+                        }
+                    }
+                    if (liveActive) {
+                        try {
+                            driver.liveViewFrame()?.let { jpeg ->
+                                android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)?.let { bmp ->
+                                    _liveFrame.value = bmp
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastHistogram > 400) {
+                                        lastHistogram = now
+                                        _liveHistogram.value = liveHistogram(bmp)
+                                    }
+                                }
+                            }
+                            liveFailures = 0
+                        } catch (e: PtpException) {
+                            if (++liveFailures >= 5) {
+                                AppLog.log("Live view stopped: ${e.message}")
+                                showToast("Live view stopped: ${e.message}")
+                                liveViewWanted.value = false
+                            }
+                        }
+                    }
+
                     driver.poll()
                     val now = System.currentTimeMillis()
                     if (now - lastSettings > 1500) {
@@ -210,8 +269,11 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                     if (failures >= 4) throw e
                     Thread.sleep(300)
                 }
-                Thread.sleep(120)
+                Thread.sleep(if (liveActive) 15 else 120)
             }
+            if (liveActive) driver.stopLiveView()
+            _liveFrame.value = null
+            _liveHistogram.value = null
             events.interrupt()
             _settings.value = emptyList()
             session.closeSession()
@@ -221,6 +283,8 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             _status.value = CameraStatus(LinkState.Error, message = t.message ?: "Connection failed")
         } finally {
             running.set(false)
+            liveViewWanted.value = false
+            _liveFrame.value = null
             _transfer.value = null
             transport?.close()
         }
@@ -275,6 +339,25 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
 
     fun capture() {
         if (_status.value.state == LinkState.Connected) captureRequests.add(Unit)
+    }
+
+    fun toggleLiveView() {
+        liveViewWanted.value = !liveViewWanted.value && _status.value.state == LinkState.Connected
+    }
+
+    fun autofocus() {
+        if (_status.value.state == LinkState.Connected) afRequests.add(Unit)
+    }
+
+    private fun liveHistogram(bmp: Bitmap): studio.miroir.tether.image.Histogram {
+        // Every 4th pixel each way is plenty for a live histogram.
+        val w = bmp.width / 4
+        val h = bmp.height / 4
+        val small = Bitmap.createScaledBitmap(bmp, w.coerceAtLeast(1), h.coerceAtLeast(1), false)
+        val px = IntArray(small.width * small.height)
+        small.getPixels(px, 0, small.width, 0, 0, small.width, small.height)
+        if (small !== bmp) small.recycle()
+        return studio.miroir.tether.image.Histogram.compute(px)
     }
 
     fun stepSetting(id: SettingId, direction: Int) {

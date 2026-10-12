@@ -7,7 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -22,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -183,4 +188,60 @@ fun Pill(text: String, modifier: Modifier = Modifier, color: Color = C.Cream) {
         text, color = color, fontSize = 12.sp,
         modifier = modifier.background(Color(0xCC000000), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
     )
+}
+
+/** Live view from the camera, with a rule-of-thirds grid for plating and composition. */
+@Composable
+fun LiveViewPane(
+    frame: Bitmap?,
+    background: Color,
+    showGrid: Boolean,
+    onAutofocus: () -> Unit,
+    onToggleGrid: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier.background(background), contentAlignment = Alignment.Center) {
+        if (frame == null) {
+            Text("Starting live view…", color = C.Muted, fontSize = 15.sp)
+        } else {
+            val img = remember(frame) { frame.asImageBitmap() }
+            Box(Modifier.fillMaxSize()) {
+                Image(img, "Live view", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+                if (showGrid) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        // Grid over the fitted image area.
+                        val s = minOf(size.width / img.width, size.height / img.height)
+                        val w = img.width * s
+                        val h = img.height * s
+                        val left = (size.width - w) / 2
+                        val top = (size.height - h) / 2
+                        val line = Color(0x88FFFFFF)
+                        for (i in 1..2) {
+                            val x = left + w * i / 3
+                            val y = top + h * i / 3
+                            drawLine(line, Offset(x, top), Offset(x, top + h), 1.dp.toPx())
+                            drawLine(line, Offset(left, y), Offset(left + w, y), 1.dp.toPx())
+                        }
+                    }
+                }
+            }
+        }
+        Row(
+            Modifier.align(Alignment.TopStart).padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Pill("● LIVE", color = C.Bad)
+            Text(
+                "AF", color = C.Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(C.Gold).clickable(onClick = onAutofocus)
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+            Text(
+                "Grid", color = if (showGrid) C.Ink else C.Cream, fontSize = 14.sp,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (showGrid) C.Cream else Color(0xCC000000))
+                    .clickable(onClick = onToggleGrid).padding(horizontal = 14.dp, vertical = 6.dp),
+            )
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package studio.miroir.tether.camera
 
+import studio.miroir.tether.image.JpegExtractor
 import studio.miroir.tether.ptp.ByteWriter
 import studio.miroir.tether.ptp.Ptp
 import studio.miroir.tether.ptp.PtpException
@@ -79,6 +80,26 @@ class SonyDriver(
         control(Ptp.SONY_CTRL_S2_RELEASE, Ptp.SONY_PRESS)
         Thread.sleep(100)
         control(Ptp.SONY_CTRL_S2_RELEASE, Ptp.SONY_RELEASE)
+        control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_RELEASE)
+    }
+
+    // ---------------------------------------------------------------- live view
+
+    override val supportsLiveView = true
+
+    /** Sony streams live view through the special object handle 0xFFFFC002 in PC Remote mode. */
+    override fun liveViewFrame(): ByteArray? {
+        val r = session.transaction(Ptp.OP_GET_OBJECT, longArrayOf(Ptp.SONY_LIVE_VIEW_HANDLE), timeoutMs = 3000)
+        return when {
+            r.ok -> JpegExtractor.firstJpeg(r.data)
+            r.code == Ptp.RC_DEVICE_BUSY || r.code == Ptp.RC_INVALID_OBJECT_HANDLE -> null
+            else -> throw PtpException("Live view frame failed: ${Ptp.responseName(r.code)}", r.code)
+        }
+    }
+
+    override fun autofocus() {
+        control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_PRESS)
+        Thread.sleep(700)
         control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_RELEASE)
     }
 

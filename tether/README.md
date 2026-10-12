@@ -22,6 +22,7 @@ with exposure and colour tools so the tablet shows what Lightroom will show.
 | Ratings & picks | ★1–5 and ♥ pick per shot, filters (All / Picks / ★3+). Saved in the session folder. |
 | Save picks to Gallery | Copies picked JPEGs to the Samsung Gallery album *MIROIR Tether/<session>*. |
 | Pick list for Lightroom | Shares the picked file names; paste into Lightroom Library Filter → Text → Filename → Contains, select all, rate. |
+| Live view | Live image from the camera with live histogram, rule-of-thirds grid and an AF button. Tap a shot in the filmstrip to review it (live view pauses). |
 | Camera control | ISO, shutter, aperture, exposure comp, WB (and Kelvin) with ‹ › steppers. The camera's exposure mode decides what can change (M = all, A = aperture, S = shutter). |
 
 Photos are saved on the tablet in `Android/data/studio.miroir.tether/files/Pictures/MIROIR Tether/<session>/`.
@@ -67,5 +68,4 @@ before publishing to Google Play.
 
 ## Roadmap
 
-- **Phase 2c:** live view on the tablet with tap-to-focus.
 - **Phase 2d:** Lightroom-matching correction profile calibrated from a ColorChecker.

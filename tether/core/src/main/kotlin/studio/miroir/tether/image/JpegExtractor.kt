@@ -26,6 +26,20 @@ object JpegExtractor {
         return best?.let { data.copyOfRange(it.first, it.last + 1) }
     }
 
+    /**
+     * Live-view frames arrive as a vendor header followed by a JPEG (and sometimes padding).
+     * Returns the first JPEG in [data], or null.
+     */
+    fun firstJpeg(data: ByteArray): ByteArray? {
+        for (i in 0 until data.size - 3) {
+            if (data[i] == FF && data[i + 1] == SOI && data[i + 2] == FF) {
+                val end = jpegEnd(data, i)
+                return data.copyOfRange(i, if (end > 0) end else data.size)
+            }
+        }
+        return null
+    }
+
     /** Returns the offset just past EOI for the JPEG starting at [start], or -1 if malformed. */
     fun jpegEnd(d: ByteArray, start: Int): Int {
         var p = start + 2

@@ -24,6 +24,10 @@ object Ptp {
     const val OP_GET_PARTIAL_OBJECT = 0x101B
 
     // Nikon vendor operations
+    const val OP_NIKON_AF_DRIVE = 0x90C1
+    const val OP_NIKON_START_LIVE_VIEW = 0x9201
+    const val OP_NIKON_END_LIVE_VIEW = 0x9202
+    const val OP_NIKON_GET_LIVE_VIEW_IMG = 0x9203
     const val OP_NIKON_CAPTURE_SDRAM = 0x90C0
     const val OP_NIKON_GET_LARGE_THUMB = 0x90C4
     const val OP_NIKON_CHECK_EVENT = 0x90C7
@@ -47,6 +51,7 @@ object Ptp {
     const val RC_DEVICE_BUSY = 0x2019
     const val RC_SESSION_ALREADY_OPEN = 0x201E
     const val RC_NIKON_OUT_OF_FOCUS = 0xA002
+    const val RC_NIKON_NOT_LIVE_VIEW = 0xA00B
 
     // Events
     const val EV_OBJECT_ADDED = 0x4002
@@ -87,6 +92,7 @@ object Ptp {
     const val SONY_PRESS = 2
     const val SONY_RELEASE = 1
     const val SONY_IN_MEMORY_HANDLE = 0xFFFFC001L
+    const val SONY_LIVE_VIEW_HANDLE = 0xFFFFC002L
 
     // Nikon SDRAM handle
     const val NIKON_SDRAM_HANDLE = 0xFFFF0001L

@@ -67,6 +67,11 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val settings by vm.settings.collectAsStateWithLifecycle()
         val context = androidx.compose.ui.platform.LocalContext.current
         val visibleShots = shots.filter { filter.matches(it) }
+        val liveWanted by vm.liveViewWanted.collectAsStateWithLifecycle()
+        val liveFrame by vm.liveFrame.collectAsStateWithLifecycle()
+        val liveHistogram by vm.liveHistogram.collectAsStateWithLifecycle()
+        val liveSupported by vm.liveSupported.collectAsStateWithLifecycle()
+        var showGrid by rememberSaveable { mutableStateOf(true) }
 
         var showGuide by rememberSaveable { mutableStateOf(false) }
         var showLog by rememberSaveable { mutableStateOf(false) }
@@ -76,7 +81,12 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
 
         val viewer: @Composable (Modifier) -> Unit = { m ->
             val a = analysis
-            if (a != null) {
+            if (liveWanted && connected) {
+                LiveViewPane(
+                    liveFrame, C.ViewerBackgrounds[bgIndex], showGrid,
+                    onAutofocus = vm::autofocus, onToggleGrid = { showGrid = !showGrid }, modifier = m,
+                )
+            } else if (a != null) {
                 Viewer(
                     a, C.ViewerBackgrounds[bgIndex], showClipping, tool, loupe, neutral,
                     onTap = vm::onImageTap, modifier = m,
@@ -91,8 +101,14 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
 
         val controls: @Composable () -> Unit = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (connected && liveSupported) {
+                    ToolButton(
+                        if (liveWanted) "● Live view ON — tap to stop" else "Live view",
+                        liveWanted, vm::toggleLiveView, Modifier.fillMaxWidth(),
+                    )
+                }
                 CameraPanel(settings, vm::stepSetting)
-                HistogramView(analysis?.histogram)
+                HistogramView(if (liveWanted) liveHistogram else analysis?.histogram)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ToolButton("Clipping", showClipping, { vm.showClipping.value = !showClipping }, Modifier.weight(1f))
                     ToolButton("Focus 100%", tool == Tool.Loupe, { vm.setTool(Tool.Loupe) }, Modifier.weight(1f))
@@ -172,7 +188,11 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                             },
                         )
                     }
-                    Filmstrip(visibleShots, selectedId, vm::select)
+                    Filmstrip(visibleShots, selectedId, { id ->
+                        // Tapping a shot leaves live view so you can review it.
+                        if (liveWanted) vm.toggleLiveView()
+                        vm.select(id)
+                    })
                 }
             }
 

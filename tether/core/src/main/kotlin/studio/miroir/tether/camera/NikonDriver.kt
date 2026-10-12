@@ -1,5 +1,6 @@
 package studio.miroir.tether.camera
 
+import studio.miroir.tether.image.JpegExtractor
 import studio.miroir.tether.ptp.NikonEvents
 import studio.miroir.tether.ptp.ObjectInfo
 import studio.miroir.tether.ptp.Ptp
@@ -58,6 +59,46 @@ class NikonDriver(
                 else -> return
             }
         }
+    }
+
+    // ---------------------------------------------------------------- live view
+
+    override val supportsLiveView = true
+    private var liveRestarts = 0
+
+    override fun startLiveView() {
+        val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_START_LIVE_VIEW) }
+        if (!r.ok) throw PtpException("Live view didn't start: ${Ptp.responseName(r.code)} — exit video mode / close menus", r.code)
+        waitReady()
+        liveRestarts = 0
+        log.log("Nikon live view on")
+    }
+
+    override fun liveViewFrame(): ByteArray? {
+        val r = session.transaction(Ptp.OP_NIKON_GET_LIVE_VIEW_IMG, timeoutMs = 3000)
+        return when {
+            r.ok -> JpegExtractor.firstJpeg(r.data)
+            r.code == Ptp.RC_DEVICE_BUSY -> null
+            r.code == Ptp.RC_NIKON_NOT_LIVE_VIEW && liveRestarts < 3 -> {
+                // The camera drops live view after a capture or when its own screen takes over.
+                liveRestarts++
+                log.log("Nikon left live view, restarting")
+                startLiveView()
+                null
+            }
+            else -> throw PtpException("Live view frame failed: ${Ptp.responseName(r.code)}", r.code)
+        }
+    }
+
+    override fun stopLiveView() {
+        runCatching { session.transaction(Ptp.OP_NIKON_END_LIVE_VIEW) }
+        log.log("Nikon live view off")
+    }
+
+    override fun autofocus() {
+        val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_AF_DRIVE) }
+        if (!r.ok) throw PtpException("Autofocus failed: ${Ptp.responseName(r.code)}", r.code)
+        waitReady()
     }
 
     override fun pollVendorEvents(): List<PtpEvent> {

@@ -57,6 +57,19 @@ abstract class CameraDriver(
     /** Check for new images and download them. Called every ~150 ms. */
     abstract fun poll()
 
+    /** True when this camera can stream live view to the tablet. */
+    open val supportsLiveView: Boolean = false
+
+    open fun startLiveView() {}
+
+    /** One live-view frame as JPEG bytes, or null if none is ready yet. */
+    open fun liveViewFrame(): ByteArray? = null
+
+    open fun stopLiveView() {}
+
+    /** Run autofocus once (at the camera's current AF point). */
+    open fun autofocus() {}
+
     /** Current exposure settings, for the tablet's camera panel. */
     open fun readSettings(): List<CameraSetting> = emptyList()
 
