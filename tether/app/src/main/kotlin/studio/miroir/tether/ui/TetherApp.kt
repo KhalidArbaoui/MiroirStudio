@@ -1,6 +1,8 @@
 package studio.miroir.tether.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -22,27 +25,26 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import studio.miroir.tether.tether.AppLog
+import studio.miroir.tether.tether.CameraStatus
 import studio.miroir.tether.tether.LinkState
-import studio.miroir.tether.tether.PreviewSource
 import studio.miroir.tether.tether.TetherViewModel
 import studio.miroir.tether.tether.Tool
 import studio.miroir.tether.tether.matches
@@ -65,129 +67,129 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val log by AppLog.text.collectAsStateWithLifecycle()
         val filter by vm.filter.collectAsStateWithLifecycle()
         val settings by vm.settings.collectAsStateWithLifecycle()
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val visibleShots = shots.filter { filter.matches(it) }
         val liveWanted by vm.liveViewWanted.collectAsStateWithLifecycle()
         val liveFrame by vm.liveFrame.collectAsStateWithLifecycle()
         val liveHistogram by vm.liveHistogram.collectAsStateWithLifecycle()
         val liveSupported by vm.liveSupported.collectAsStateWithLifecycle()
-        var showGrid by rememberSaveable { mutableStateOf(true) }
+        val context = androidx.compose.ui.platform.LocalContext.current
 
+        var showGrid by rememberSaveable { mutableStateOf(false) }
         var showGuide by rememberSaveable { mutableStateOf(false) }
         var showLog by rememberSaveable { mutableStateOf(false) }
         var bgIndex by rememberSaveable { mutableIntStateOf(1) }
+
+        val visibleShots = shots.filter { filter.matches(it) }
         val selected = shots.firstOrNull { it.id == selectedId }
         val connected = status.state == LinkState.Connected
+        val live = liveWanted && connected
 
-        val viewer: @Composable (Modifier) -> Unit = { m ->
-            val a = analysis
-            if (liveWanted && connected) {
-                LiveViewPane(
-                    liveFrame, C.ViewerBackgrounds[bgIndex], showGrid,
-                    onAutofocus = vm::autofocus, onToggleGrid = { showGrid = !showGrid }, modifier = m,
-                )
-            } else if (a != null) {
-                Viewer(
-                    a, C.ViewerBackgrounds[bgIndex], showClipping, tool, loupe, neutral,
-                    onTap = vm::onImageTap, modifier = m,
-                )
+        val shareList = {
+            val list = vm.pickList()
+            if (list.isEmpty()) {
+                android.widget.Toast.makeText(context, "No picks yet", android.widget.Toast.LENGTH_SHORT).show()
             } else {
-                EmptyState(
-                    connected = connected, model = status.model, error = status.state == LinkState.Error,
-                    message = status.message, onConnect = onConnectRequest, onGuide = { showGuide = true }, modifier = m,
-                )
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, list)
+                context.startActivity(android.content.Intent.createChooser(send, "Pick list for Lightroom"))
             }
         }
 
-        val controls: @Composable () -> Unit = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (connected && liveSupported) {
-                    ToolButton(
-                        if (liveWanted) "● Live view ON — tap to stop" else "Live view",
-                        liveWanted, vm::toggleLiveView, Modifier.fillMaxWidth(),
+        val stage: @Composable (Modifier) -> Unit = { m ->
+            Box(m) {
+                val a = analysis
+                when {
+                    live -> LiveViewPane(liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize())
+                    a != null -> Viewer(
+                        a, C.ViewerBackgrounds[bgIndex], showClipping, showGrid, tool, loupe, neutral,
+                        onTap = vm::onImageTap, modifier = Modifier.fillMaxSize(),
+                    )
+                    else -> EmptyState(
+                        connected = connected, model = status.model, error = status.state == LinkState.Error,
+                        message = status.message, onConnect = onConnectRequest, onGuide = { showGuide = true },
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
-                CameraPanel(settings, vm::stepSetting)
-                HistogramView(if (liveWanted) liveHistogram else analysis?.histogram)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ToolButton("Clipping", showClipping, { vm.showClipping.value = !showClipping }, Modifier.weight(1f))
-                    ToolButton("Focus 100%", tool == Tool.Loupe, { vm.setTool(Tool.Loupe) }, Modifier.weight(1f))
+                if (live || a != null) {
+                    ToolRail(
+                        live = live, showClipping = showClipping, tool = tool, showGrid = showGrid, bgIndex = bgIndex,
+                        onClipping = { vm.showClipping.value = !showClipping },
+                        onLoupe = { vm.setTool(Tool.Loupe) },
+                        onGreyCard = { vm.setTool(Tool.WhiteBalance) },
+                        onGrid = { showGrid = !showGrid },
+                        onBackground = { bgIndex = (bgIndex + 1) % C.ViewerBackgrounds.size },
+                        onAutofocus = vm::autofocus,
+                        modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp),
+                    )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ToolButton("Grey card", tool == Tool.WhiteBalance, { vm.setTool(Tool.WhiteBalance) }, Modifier.weight(1f))
-                    ToolButton(listOf("Black", "Grey", "Light")[bgIndex], false, { bgIndex = (bgIndex + 1) % 3 }, Modifier.weight(1f))
+                if (!live && shots.isNotEmpty()) {
+                    val index = shots.indexOfFirst { it.id == selectedId }
+                    FrameCounter(
+                        index + 1, shots.size, onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+                    )
                 }
-                ToggleRow("Follow new shots", follow, { vm.followNewest.value = it })
-                ToggleRow("Copy RAW to tablet", copyRaw, vm::setCopyRaw, hint = "Off = faster, RAW stays on the card")
             }
+        }
+
+        val inspector: @Composable () -> Unit = {
+            Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column {
+                    SectionLabel(if (live) "Live histogram" else "Histogram")
+                    HistogramView(if (live) liveHistogram else analysis?.histogram)
+                }
+                ShotInfo(
+                    selected, analysis?.exif,
+                    onRate = { r -> selected?.let { vm.setRating(it.id, r) } },
+                    onPick = { selected?.let { vm.togglePick(it.id) } },
+                )
+                Column {
+                    SectionLabel("Session")
+                    ToggleRow("Follow new shots", follow, { vm.followNewest.value = it })
+                    ToggleRow("Copy RAW to tablet", copyRaw, vm::setCopyRaw, hint = "Off = faster, RAW stays on the card")
+                }
+            }
+        }
+
+        val tetherBar: @Composable () -> Unit = {
+            TetherBar(
+                connected = connected, settings = settings, liveSupported = liveSupported, liveOn = live,
+                receiving = transfer != null, onStep = vm::stepSetting, onToggleLive = vm::toggleLiveView,
+                onShutter = vm::capture, onConnect = onConnectRequest,
+            )
         }
 
         Box(Modifier.fillMaxSize().background(C.Ink).safeDrawingPadding()) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth > 840.dp
                 Column(Modifier.fillMaxSize()) {
-                    TopBar(status, onConnect = onConnectRequest, onDisconnect = vm::disconnect, onGuide = { showGuide = true }, onLog = { showLog = true })
+                    TopBar(
+                        status, onConnect = onConnectRequest, onDisconnect = vm::disconnect,
+                        onGuide = { showGuide = true }, onLog = { showLog = true },
+                    )
                     if (wide) {
                         Row(Modifier.weight(1f)) {
-                            Column(Modifier.weight(1f)) {
-                                viewer(Modifier.weight(1f).fillMaxWidth())
-                                InfoBar(
-                                    selected?.baseName, selected?.source, analysis?.exif,
-                                    onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
-                                    rating = {
-                                        selected?.let { shot ->
-                                            RatingControls(shot.rating, shot.pick, { vm.setRating(shot.id, it) }, { vm.togglePick(shot.id) })
-                                        }
-                                    },
-                                )
-                            }
+                            stage(Modifier.weight(1f).fillMaxHeight())
                             Column(
-                                Modifier.width(320.dp).fillMaxHeight().background(C.Panel).padding(16.dp),
+                                Modifier.width(320.dp).fillMaxHeight().background(C.Panel)
+                                    .padding(horizontal = 18.dp, vertical = 16.dp),
                             ) {
-                                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { controls() }
+                                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { inspector() }
                                 TransferBar(transfer)
-                                Spacer(Modifier.height(12.dp))
-                                ShutterButton(connected, vm::capture, Modifier.align(Alignment.CenterHorizontally))
                             }
                         }
+                        tetherBar()
                     } else {
-                        viewer(Modifier.weight(1f).fillMaxWidth())
-                        InfoBar(
-                                    selected?.baseName, selected?.source, analysis?.exif,
-                                    onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
-                                    rating = {
-                                        selected?.let { shot ->
-                                            RatingControls(shot.rating, shot.pick, { vm.setRating(shot.id, it) }, { vm.togglePick(shot.id) })
-                                        }
-                                    },
-                                )
-                        Row(
-                            Modifier.fillMaxWidth().background(C.Panel).padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        stage(Modifier.weight(1f).fillMaxWidth())
+                        tetherBar()
+                        Column(
+                            Modifier.fillMaxWidth().height(240.dp).background(C.Panel)
+                                .verticalScroll(rememberScrollState()).padding(16.dp),
                         ) {
-                            Column(Modifier.weight(1f).height(260.dp).verticalScroll(rememberScrollState())) {
-                                controls()
-                                TransferBar(transfer)
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            ShutterButton(connected, vm::capture)
+                            inspector()
+                            TransferBar(transfer)
                         }
                     }
-                    if (shots.isNotEmpty()) {
-                        FilterBar(
-                            shots, filter, { vm.filter.value = it }, vm::exportPicks,
-                            onShareList = {
-                                val list = vm.pickList()
-                                if (list.isEmpty()) {
-                                    android.widget.Toast.makeText(context, "No picks yet", android.widget.Toast.LENGTH_SHORT).show()
-                                } else {
-                                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
-                                        .putExtra(android.content.Intent.EXTRA_TEXT, list)
-                                    context.startActivity(android.content.Intent.createChooser(send, "Pick list for Lightroom"))
-                                }
-                            },
-                        )
-                    }
+                    if (shots.isNotEmpty()) FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList)
                     Filmstrip(visibleShots, selectedId, { id ->
                         // Tapping a shot leaves live view so you can review it.
                         if (liveWanted) vm.toggleLiveView()
@@ -196,13 +198,9 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                 }
             }
 
-            toast?.let { msg ->
-                LaunchedEffect(msg) { delay(4000); vm.clearToast() }
-                Text(
-                    msg, color = C.Ink, fontSize = 14.sp,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp)
-                        .background(C.Gold, RoundedCornerShape(10.dp)).padding(horizontal = 18.dp, vertical = 12.dp),
-                )
+            toast?.let { t ->
+                LaunchedEffect(t) { delay(3500); vm.clearToast() }
+                ToastPill(t.text, t.error, Modifier.align(Alignment.TopCenter).padding(top = 72.dp))
             }
         }
 
@@ -213,67 +211,93 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
 
 @Composable
 private fun TopBar(
-    status: studio.miroir.tether.tether.CameraStatus,
+    status: CameraStatus,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onGuide: () -> Unit,
     onLog: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().background(C.Ink).padding(horizontal = 16.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().height(60.dp).background(C.Ink).padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("MIROIR", color = C.Gold, fontSize = 20.sp, letterSpacing = 4.sp, fontWeight = FontWeight.Light)
-        Text("  TETHER", color = C.Muted, fontSize = 12.sp, letterSpacing = 3.sp)
+        Text("MIROIR", color = C.Gold, fontSize = 19.sp, letterSpacing = 5.sp, fontWeight = FontWeight.Light)
+        Spacer(Modifier.width(10.dp))
+        Text("TETHER", style = T.Label.copy(letterSpacing = 3.sp))
         Spacer(Modifier.weight(1f))
         StatusChip(status)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(10.dp))
         when (status.state) {
-            LinkState.Connected -> TextButton(onClick = onDisconnect) { Text("Disconnect", color = C.Muted) }
-            LinkState.Connecting -> {}
-            else -> TextButton(onClick = onConnect) { Text("Connect", color = C.Gold) }
+            LinkState.Connected -> IconButton(Glyph.Unplug, onDisconnect, size = 40.dp, tint = C.Muted)
+            LinkState.Connecting -> Spacer(Modifier.size(40.dp))
+            else -> IconButton(Glyph.Plug, onConnect, size = 40.dp, tint = C.Gold)
         }
-        TextButton(onClick = onGuide) { Text("Guide", color = C.Cream) }
-        TextButton(onClick = onLog) { Text("Log", color = C.Cream) }
+        IconButton(Glyph.Info, onGuide, size = 40.dp)
+        IconButton(Glyph.Log, onLog, size = 40.dp)
+    }
+}
+
+/** Vertical icon toolbar floating on the viewer's left edge. */
+@Composable
+private fun ToolRail(
+    live: Boolean,
+    showClipping: Boolean,
+    tool: Tool,
+    showGrid: Boolean,
+    bgIndex: Int,
+    onClipping: () -> Unit,
+    onLoupe: () -> Unit,
+    onGreyCard: () -> Unit,
+    onGrid: () -> Unit,
+    onBackground: () -> Unit,
+    onAutofocus: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xD917171A))
+            .border(1.dp, C.Line, RoundedCornerShape(14.dp)).padding(5.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (live) {
+            Box(
+                Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(C.Gold).clickable(onClick = onAutofocus),
+                contentAlignment = Alignment.Center,
+            ) { Text("AF", style = T.Body.copy(color = C.Ink, fontWeight = FontWeight.Bold)) }
+        } else {
+            IconButton(Glyph.Clipping, onClipping, active = showClipping)
+            IconButton(Glyph.Focus, onLoupe, active = tool == Tool.Loupe)
+            IconButton(Glyph.Eyedropper, onGreyCard, active = tool == Tool.WhiteBalance)
+        }
+        IconButton(Glyph.Grid, onGrid, active = showGrid)
+        Box(contentAlignment = Alignment.BottomCenter) {
+            IconButton(Glyph.Background, onBackground)
+            Text(listOf("K", "G", "L")[bgIndex.coerceIn(0, 2)], style = T.Label.copy(fontSize = 8.sp, color = C.Muted))
+        }
     }
 }
 
 @Composable
-private fun InfoBar(
-    name: String?,
-    source: PreviewSource?,
-    exif: studio.miroir.tether.tether.ExifSummary?,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    rating: @Composable () -> Unit = {},
-) {
+private fun FrameCounter(current: Int, total: Int, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        Modifier.fillMaxWidth().background(C.Ink).padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier.clip(RoundedCornerShape(50)).background(Color(0xCC000000)).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrev) { Text("‹", color = C.Cream, fontSize = 22.sp) }
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(name ?: "—", color = C.Cream, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                if (source != null) {
-                    Spacer(Modifier.width(8.dp))
-                    Pill(source.label, color = if (source == PreviewSource.Jpeg) C.Ok else C.Warn)
-                }
-                if (exif?.adobeRgb == true) {
-                    Spacer(Modifier.width(6.dp))
-                    Pill("Adobe RGB — set camera to sRGB", color = C.Warn)
-                }
-            }
-            if (exif != null) {
-                Text(
-                    listOfNotNull(exif.exposureLine.ifEmpty { null }, exif.whiteBalance, exif.lens).joinToString("   ·   "),
-                    color = C.Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        rating()
-        Spacer(Modifier.width(8.dp))
-        TextButton(onClick = onNext) { Text("›", color = C.Cream, fontSize = 22.sp) }
+        IconButton(Glyph.ChevronLeft, onPrev, size = 36.dp)
+        Text("${current.coerceAtLeast(0)} / $total", style = T.Small.copy(color = C.Cream), modifier = Modifier.padding(horizontal = 6.dp))
+        IconButton(Glyph.ChevronRight, onNext, size = 36.dp)
+    }
+}
+
+@Composable
+private fun ToastPill(text: String, error: Boolean, modifier: Modifier = Modifier) {
+    Row(
+        modifier.widthIn(max = 620.dp).clip(RoundedCornerShape(12.dp)).background(C.Raised)
+            .border(1.dp, C.Line, RoundedCornerShape(12.dp)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.width(4.dp).height(44.dp).background(if (error) C.Bad else C.Gold))
+        Text(text, style = T.Body.copy(fontSize = 13.sp), modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
     }
 }
 
@@ -290,13 +314,13 @@ private fun EmptyState(
     Box(modifier.background(C.ViewerBackgrounds[0]), contentAlignment = Alignment.Center) {
         Column(Modifier.widthIn(max = 520.dp).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (connected) {
-                Text("$model connected", color = C.Gold, fontSize = 26.sp, fontWeight = FontWeight.Light)
+                Text("$model connected", style = T.Title)
                 Text(
                     "Take a photo with the camera or the shutter button. It appears here in a few seconds.",
                     color = C.Muted, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 10.dp),
                 )
             } else {
-                Text("Connect your camera", color = C.Gold, fontSize = 26.sp, fontWeight = FontWeight.Light)
+                Text("Connect your camera", style = T.Title)
                 Text(
                     "Plug the Nikon Z8 or Sony A7 III into the tablet with a USB-C cable, turn the camera on, and allow access when Android asks.",
                     color = C.Muted, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 10.dp),

@@ -82,6 +82,9 @@ data class Transfer(val filename: String, val done: Long, val total: Long) {
 
 enum class Tool { None, Loupe, WhiteBalance }
 
+/** A short message for the top of the screen. Each instance is distinct so repeats re-show. */
+class Toast(val text: String, val error: Boolean)
+
 private const val LIVE_VIEW_GIVE_UP_MS = 4000L
 
 class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener {
@@ -102,8 +105,8 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     private val _transfer = MutableStateFlow<Transfer?>(null)
     val transfer: StateFlow<Transfer?> = _transfer
 
-    private val _toast = MutableStateFlow<String?>(null)
-    val toast: StateFlow<String?> = _toast
+    private val _toast = MutableStateFlow<Toast?>(null)
+    val toast: StateFlow<Toast?> = _toast
 
     val followNewest = MutableStateFlow(true)
     val showClipping = MutableStateFlow(true)
@@ -401,7 +404,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     fun exportPicks() {
         val picks = _shots.value.filter { it.pick && it.id !in exported }
         if (picks.isEmpty()) {
-            showToast(if (_shots.value.any { it.pick }) "All picks are already in the Gallery" else "No picks yet — tap ♥ on your best shots")
+            showToast(if (_shots.value.any { it.pick }) "All picks are already in the Gallery" else "No picks yet — tap ♥ on your best shots", error = false)
             return
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -431,7 +434,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                     AppLog.error("Export ${shot.baseName}", t)
                 }
             }
-            showToast("$n pick${if (n == 1) "" else "s"} saved to Gallery › MIROIR Tether")
+            showToast("$n pick${if (n == 1) "" else "s"} saved to Gallery › MIROIR Tether", error = n == 0)
         }
     }
 
@@ -441,8 +444,9 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         prefs.edit().putBoolean("copyRaw", on).apply()
     }
 
-    private fun showToast(msg: String) {
-        _toast.value = msg
+    /** Errors get a red accent; [error] = false for confirmations. */
+    private fun showToast(msg: String, error: Boolean = true) {
+        _toast.value = Toast(msg, error)
     }
 
     fun clearToast() { _toast.value = null }

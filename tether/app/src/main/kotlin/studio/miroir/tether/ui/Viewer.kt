@@ -51,6 +51,7 @@ fun Viewer(
     analysis: Analysis,
     background: Color,
     showClipping: Boolean,
+    showGrid: Boolean,
     tool: Tool,
     loupe: Bitmap?,
     neutral: NeutralSample?,
@@ -131,6 +132,7 @@ fun Viewer(
             if (showClipping) {
                 drawImage(mask, IntOffset.Zero, IntSize(mask.width, mask.height), dstOffset, dstSize, alpha = 0.9f, filterQuality = FilterQuality.None)
             }
+            if (showGrid) drawThirds(r)
             marker?.let { m ->
                 val p = Offset(r.left + m.x * r.width, r.top + m.y * r.height)
                 drawCircle(Color.Black, 15.dp.toPx(), p, style = Stroke(4.dp.toPx()))
@@ -139,7 +141,7 @@ fun Viewer(
         }
 
         if (scale > 1.01f) {
-            Pill("${(scale * 100 / (analysis.fullWidth / fitRect().width.coerceAtLeast(1f))).toInt()}%", Modifier.align(Alignment.BottomStart).padding(12.dp))
+            Pill("${(scale * 100 / (analysis.fullWidth / fitRect().width.coerceAtLeast(1f))).toInt()}%", Modifier.align(Alignment.BottomEnd).padding(12.dp))
         }
 
         if (tool == Tool.Loupe) {
@@ -164,7 +166,7 @@ fun Viewer(
 
         if (tool == Tool.WhiteBalance) {
             Column(
-                Modifier.align(Alignment.TopStart).padding(12.dp)
+                Modifier.align(Alignment.TopStart).padding(start = 76.dp, top = 12.dp)
                     .background(Color(0xE6000000), RoundedCornerShape(10.dp)).padding(12.dp),
             ) {
                 if (neutral == null) {
@@ -190,14 +192,12 @@ fun Pill(text: String, modifier: Modifier = Modifier, color: Color = C.Cream) {
     )
 }
 
-/** Live view from the camera, with a rule-of-thirds grid for plating and composition. */
+/** Live view from the camera, with optional rule-of-thirds grid. */
 @Composable
 fun LiveViewPane(
     frame: Bitmap?,
     background: Color,
     showGrid: Boolean,
-    onAutofocus: () -> Unit,
-    onToggleGrid: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.background(background), contentAlignment = Alignment.Center) {
@@ -205,43 +205,27 @@ fun LiveViewPane(
             Text("Starting live view…", color = C.Muted, fontSize = 15.sp)
         } else {
             val img = remember(frame) { frame.asImageBitmap() }
-            Box(Modifier.fillMaxSize()) {
-                Image(img, "Live view", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
-                if (showGrid) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        // Grid over the fitted image area.
-                        val s = minOf(size.width / img.width, size.height / img.height)
-                        val w = img.width * s
-                        val h = img.height * s
-                        val left = (size.width - w) / 2
-                        val top = (size.height - h) / 2
-                        val line = Color(0x88FFFFFF)
-                        for (i in 1..2) {
-                            val x = left + w * i / 3
-                            val y = top + h * i / 3
-                            drawLine(line, Offset(x, top), Offset(x, top + h), 1.dp.toPx())
-                            drawLine(line, Offset(left, y), Offset(left + w, y), 1.dp.toPx())
-                        }
-                    }
+            Image(img, "Live view", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+            if (showGrid) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val sc = minOf(size.width / img.width, size.height / img.height)
+                    val w = img.width * sc
+                    val h = img.height * sc
+                    drawThirds(Rect(Offset((size.width - w) / 2, (size.height - h) / 2), Size(w, h)))
                 }
             }
         }
-        Row(
-            Modifier.align(Alignment.TopStart).padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Pill("● LIVE", color = C.Bad)
-            Text(
-                "AF", color = C.Ink, fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(C.Gold).clickable(onClick = onAutofocus)
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-            )
-            Text(
-                "Grid", color = if (showGrid) C.Ink else C.Cream, fontSize = 14.sp,
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (showGrid) C.Cream else Color(0xCC000000))
-                    .clickable(onClick = onToggleGrid).padding(horizontal = 14.dp, vertical = 6.dp),
-            )
-        }
+        Pill("● LIVE", Modifier.align(Alignment.TopEnd).padding(14.dp), color = C.Bad)
+    }
+}
+
+/** Rule-of-thirds lines over [r]. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawThirds(r: Rect) {
+    val line = Color(0x80FFFFFF)
+    for (i in 1..2) {
+        val x = r.left + r.width * i / 3
+        val y = r.top + r.height * i / 3
+        drawLine(line, Offset(x, r.top), Offset(x, r.bottom), 1.dp.toPx())
+        drawLine(line, Offset(r.left, y), Offset(r.right, y), 1.dp.toPx())
     }
 }

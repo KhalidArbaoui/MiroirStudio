@@ -1,6 +1,5 @@
 package studio.miroir.tether.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +22,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -32,7 +30,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -40,65 +40,65 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import studio.miroir.tether.camera.CameraSetting
-import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.image.Histogram
-import studio.miroir.tether.tether.ShotFilter
-import studio.miroir.tether.tether.matches
 import studio.miroir.tether.tether.CameraStatus
+import studio.miroir.tether.tether.ExifSummary
 import studio.miroir.tether.tether.LinkState
 import studio.miroir.tether.tether.PreviewSource
 import studio.miroir.tether.tether.Shot
+import studio.miroir.tether.tether.ShotFilter
 import studio.miroir.tether.tether.Transfer
+import studio.miroir.tether.tether.matches
 
 @Composable
-fun HistogramView(h: Histogram?, modifier: Modifier = Modifier) {
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text.uppercase(), style = T.Label, modifier = modifier.padding(bottom = 8.dp))
+}
+
+@Composable
+fun HistogramView(h: Histogram?, height: Dp = 150.dp, modifier: Modifier = Modifier) {
     Column(modifier) {
         Box(
-            Modifier.fillMaxWidth().height(130.dp).background(Color(0xFF0E0E0E), RoundedCornerShape(8.dp))
+            Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(8.dp)).background(Color(0xFF0B0B0C))
                 .border(1.dp, C.Line, RoundedCornerShape(8.dp)).padding(6.dp),
         ) {
-            if (h != null) {
-                Canvas(Modifier.matchParentSize()) {
-                    val peak = h.peak.toFloat()
-                    fun path(bins: IntArray): Path = Path().apply {
-                        moveTo(0f, size.height)
-                        for (i in 0..255) {
-                            val x = i / 255f * size.width
-                            val y = size.height - (bins[i] / peak).coerceAtMost(1f) * size.height
-                            lineTo(x, y)
-                        }
-                        lineTo(size.width, size.height)
-                        close()
-                    }
-                    // Quarter guide lines.
-                    for (q in 1..3) {
-                        val x = size.width * q / 4f
-                        drawLine(Color(0xFF262626), Offset(x, 0f), Offset(x, size.height), 1f)
-                    }
-                    drawPath(path(h.red), Color(0x66FF4040))
-                    drawPath(path(h.green), Color(0x6640FF60))
-                    drawPath(path(h.blue), Color(0x664080FF))
-                    drawPath(path(h.luma), Color(0xCCE8E2D6), style = Stroke(1.5f))
-                    // Clipping indicators, like Lightroom's corner triangles.
-                    val t = 9.dp.toPx()
-                    if (h.shadowClipPct > 0.1f) drawPath(
-                        Path().apply { moveTo(0f, 0f); lineTo(t, 0f); lineTo(0f, t); close() }, Color(0xFF2D6BFF),
-                    )
-                    if (h.highlightClipPct > 0.1f) drawPath(
-                        Path().apply { moveTo(size.width, 0f); lineTo(size.width - t, 0f); lineTo(size.width, t); close() }, Color(0xFFFF2D2D),
-                    )
+            Canvas(Modifier.matchParentSize()) {
+                // Quarter guides.
+                for (q in 1..3) {
+                    val x = size.width * q / 4f
+                    drawLine(Color(0xFF232326), Offset(x, 0f), Offset(x, size.height), 1f)
                 }
+                if (h == null) return@Canvas
+                val peak = h.peak.toFloat()
+                fun path(bins: IntArray): Path = Path().apply {
+                    moveTo(0f, size.height)
+                    for (i in 0..255) {
+                        lineTo(i / 255f * size.width, size.height - (bins[i] / peak).coerceAtMost(1f) * size.height)
+                    }
+                    lineTo(size.width, size.height)
+                    close()
+                }
+                drawPath(path(h.red), Color(0x66FF4040))
+                drawPath(path(h.green), Color(0x6640FF60))
+                drawPath(path(h.blue), Color(0x664080FF))
+                drawPath(path(h.luma), Color(0xCCE7E7E7), style = Stroke(1.5f))
+                // Clipping indicators, like Lightroom's corner triangles.
+                val t = 9.dp.toPx()
+                if (h.shadowClipPct > 0.1f) drawPath(
+                    Path().apply { moveTo(0f, 0f); lineTo(t, 0f); lineTo(0f, t); close() }, Color(0xFF2D6BFF),
+                )
+                if (h.highlightClipPct > 0.1f) drawPath(
+                    Path().apply { moveTo(size.width, 0f); lineTo(size.width - t, 0f); lineTo(size.width, t); close() }, Color(0xFFFF2D2D),
+                )
             }
         }
-        if (h != null) {
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Stat("Shadows", "%.1f%%".format(h.shadowClipPct), h.shadowClipPct > 0.5f)
-                Stat("Average", "${(h.meanLuma / 255f * 100).toInt()}%", false)
-                Stat("Highlights", "%.1f%%".format(h.highlightClipPct), h.highlightClipPct > 0.5f)
-            }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Stat("Shadows", h?.let { "%.1f%%".format(it.shadowClipPct) } ?: "–", (h?.shadowClipPct ?: 0f) > 0.5f)
+            Stat("Average", h?.let { "${(it.meanLuma / 255f * 100).toInt()}%" } ?: "–", false)
+            Stat("Highlights", h?.let { "%.1f%%".format(it.highlightClipPct) } ?: "–", (h?.highlightClipPct ?: 0f) > 0.5f)
         }
     }
 }
@@ -106,8 +106,63 @@ fun HistogramView(h: Histogram?, modifier: Modifier = Modifier) {
 @Composable
 private fun Stat(label: String, value: String, alert: Boolean) {
     Column {
-        Text(label.uppercase(), color = C.Muted, fontSize = 10.sp, letterSpacing = 1.sp)
-        Text(value, color = if (alert) C.Bad else C.Cream, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(label.uppercase(), style = T.Label)
+        Text(value, style = T.Value.copy(fontSize = 15.sp, color = if (alert) C.Bad else C.Cream))
+    }
+}
+
+/** Name, source, exposure, lens, rating for the selected shot. */
+@Composable
+fun ShotInfo(shot: Shot?, exif: ExifSummary?, onRate: (Int) -> Unit, onPick: () -> Unit) {
+    Column {
+        SectionLabel("Shot")
+        if (shot == null) {
+            Text("No shot selected", style = T.Small)
+            return@Column
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(shot.baseName, style = T.Body.copy(fontWeight = FontWeight.Medium), modifier = Modifier.weight(1f), maxLines = 1)
+            Tag(shot.source.label, if (shot.source == PreviewSource.Jpeg) C.Ok else C.Warn)
+        }
+        if (exif != null) {
+            if (exif.exposureLine.isNotEmpty()) Text(exif.exposureLine, style = T.Small.copy(color = C.Cream), modifier = Modifier.padding(top = 6.dp))
+            listOfNotNull(exif.whiteBalance, exif.lens).takeIf { it.isNotEmpty() }?.let {
+                Text(it.joinToString("  ·  "), style = T.Small, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (exif.adobeRgb) Tag("Adobe RGB — set camera to sRGB", C.Warn, Modifier.padding(top = 6.dp))
+        }
+        Spacer(Modifier.height(10.dp))
+        RatingControls(shot.rating, shot.pick, onRate, onPick)
+    }
+}
+
+@Composable
+fun Tag(text: String, color: Color, modifier: Modifier = Modifier) {
+    Text(
+        text, style = T.Small.copy(color = color, fontSize = 11.sp),
+        modifier = modifier.clip(RoundedCornerShape(4.dp)).background(color.copy(alpha = 0.12f)).padding(horizontal = 6.dp, vertical = 2.dp),
+    )
+}
+
+@Composable
+fun RatingControls(rating: Int, pick: Boolean, onRate: (Int) -> Unit, onPick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        for (i in 1..5) {
+            Box(Modifier.size(34.dp).clip(CircleShape).clickable { onRate(i) }, contentAlignment = Alignment.Center) {
+                Icon(if (i <= rating) Glyph.StarFilled else Glyph.Star, if (i <= rating) C.Gold else C.Faint, size = 22.dp)
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Row(
+            Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.GoldDim else C.Raised)
+                .border(1.dp, if (pick) C.Gold else C.Line, RoundedCornerShape(50))
+                .clickable(onClick = onPick).padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(if (pick) Glyph.HeartFilled else Glyph.Heart, if (pick) C.Gold else C.Cream, size = 16.dp)
+            Spacer(Modifier.width(6.dp))
+            Text("Pick", style = T.Body.copy(color = if (pick) C.Gold else C.Cream, fontSize = 13.sp))
+        }
     }
 }
 
@@ -117,15 +172,15 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
     val index = shots.indexOfFirst { it.id == selectedId }
     LaunchedEffect(index, shots.size) { if (index >= 0) state.animateScrollToItem(index) }
     LazyRow(
-        modifier.fillMaxWidth().height(92.dp).background(C.Panel),
+        modifier.fillMaxWidth().height(104.dp).background(C.Ink),
         state = state,
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(shots, key = { it.id }) { shot ->
             val selected = shot.id == selectedId
             Box(
-                Modifier.width(112.dp).height(76.dp).clip(RoundedCornerShape(6.dp))
+                Modifier.width(126.dp).height(84.dp).clip(RoundedCornerShape(6.dp))
                     .background(C.Raised)
                     .border(if (selected) 2.dp else 1.dp, if (selected) C.Gold else C.Line, RoundedCornerShape(6.dp))
                     .clickable { onSelect(shot.id) },
@@ -133,26 +188,24 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
                 shot.thumb?.let {
                     Image(it.asImageBitmap(), shot.baseName, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
                 }
-                Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (shot.pick) Badge("♥", C.Gold)
-                    if (shot.rating > 0) Badge("★${shot.rating}", C.Gold)
-                }
-                Row(Modifier.align(Alignment.BottomStart).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (shot.jpegFile != null) Badge("J")
-                    if (shot.rawFile != null) Badge("RAW")
-                    if (shot.source != PreviewSource.Jpeg) Badge("P", C.Warn)
+                // Bottom scrim with rating + flags.
+                Row(
+                    Modifier.align(Alignment.BottomStart).fillMaxWidth().background(Color(0x99000000))
+                        .padding(horizontal = 5.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    for (i in 1..shot.rating) Icon(Glyph.StarFilled, C.Gold, size = 10.dp)
+                    Spacer(Modifier.weight(1f))
+                    if (shot.source != PreviewSource.Jpeg) Box(Modifier.size(6.dp).background(C.Warn, CircleShape))
+                    if (shot.rawFile != null) Text(" RAW", style = T.Label.copy(fontSize = 8.sp, color = C.Cream))
+                    if (shot.pick) {
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Glyph.HeartFilled, C.Gold, size = 11.dp)
+                    }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun Badge(text: String, color: Color = C.Cream) {
-    Text(
-        text, color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold,
-        modifier = Modifier.background(Color(0xCC000000), RoundedCornerShape(3.dp)).padding(horizontal = 4.dp, vertical = 1.dp),
-    )
 }
 
 @Composable
@@ -161,30 +214,34 @@ fun StatusChip(status: CameraStatus) {
         LinkState.Connected -> C.Ok to "${status.brand} ${status.model}".trim()
         LinkState.Connecting -> C.Warn to "Connecting…"
         LinkState.Error -> C.Bad to "Not connected"
-        LinkState.Disconnected -> C.Muted to "No camera"
+        LinkState.Disconnected -> C.Faint to "No camera"
     }
     Row(
-        Modifier.background(C.Raised, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 6.dp),
+        Modifier.clip(RoundedCornerShape(50)).background(C.Raised).padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(8.dp).background(dot, CircleShape))
+        Box(Modifier.size(7.dp).background(dot, CircleShape))
         Spacer(Modifier.width(8.dp))
-        Text(label, color = C.Cream, fontSize = 13.sp, maxLines = 1)
+        Text(label, style = T.Body.copy(fontSize = 13.sp), maxLines = 1)
         status.battery?.let {
-            Spacer(Modifier.width(10.dp))
-            Text("🔋 $it%", color = if (it < 20) C.Bad else C.Muted, fontSize = 12.sp)
+            Spacer(Modifier.width(12.dp))
+            Battery(it)
+            Spacer(Modifier.width(5.dp))
+            Text("$it%", style = T.Small.copy(color = if (it < 20) C.Bad else C.Muted))
         }
     }
 }
 
 @Composable
-fun ShutterButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Box(
-        modifier.size(88.dp).border(3.dp, if (enabled) C.Gold else C.Line, CircleShape).padding(7.dp)
-            .clip(CircleShape)
-            .background(if (enabled) C.Cream else C.Raised)
-            .clickable(enabled = enabled, onClick = onClick),
-    )
+private fun Battery(level: Int) {
+    val fill = if (level < 20) C.Bad else C.Cream
+    Canvas(Modifier.size(20.dp, 10.dp)) {
+        val body = Size(size.width - 2.dp.toPx(), size.height)
+        drawRoundRect(C.Muted, Offset.Zero, body, CornerRadius(2.dp.toPx()), style = Stroke(1.2.dp.toPx()))
+        drawRect(C.Muted, Offset(body.width, size.height * 0.3f), Size(2.dp.toPx(), size.height * 0.4f))
+        val inset = 2.dp.toPx()
+        drawRect(fill, Offset(inset, inset), Size((body.width - 2 * inset) * level / 100f, body.height - 2 * inset))
+    }
 }
 
 @Composable
@@ -192,8 +249,8 @@ fun TransferBar(t: Transfer?) {
     if (t == null) return
     Column(Modifier.fillMaxWidth()) {
         Text(
-            "Receiving ${t.filename}  ${t.done / 1_048_576}/${t.total / 1_048_576} MB",
-            color = C.Muted, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            "Receiving ${t.filename}  ${t.done / 1_048_576} / ${t.total / 1_048_576} MB",
+            style = T.Small, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         LinearProgressIndicator(
             progress = { t.fraction }, color = C.Gold, trackColor = C.Line,
@@ -206,25 +263,16 @@ fun TransferBar(t: Transfer?) {
 fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, hint: String? = null) {
     Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text(label, color = C.Cream, fontSize = 14.sp)
-            if (hint != null) Text(hint, color = C.Muted, fontSize = 11.sp)
+            Text(label, style = T.Body)
+            if (hint != null) Text(hint, style = T.Small.copy(fontSize = 11.sp))
         }
         Switch(
             checked = checked, onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = C.Ink, checkedTrackColor = C.Gold),
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = C.Ink, checkedTrackColor = C.Gold,
+                uncheckedThumbColor = C.Muted, uncheckedTrackColor = C.Raised, uncheckedBorderColor = C.Line,
+            ),
         )
-    }
-}
-
-@Composable
-fun ToolButton(label: String, active: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
-        onClick = onClick, modifier = modifier,
-        border = BorderStroke(1.dp, if (active) C.Gold else C.Line),
-        shape = RoundedCornerShape(8.dp),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-    ) {
-        Text(label, color = if (active) C.Gold else C.Cream, fontSize = 13.sp, maxLines = 1)
     }
 }
 
@@ -238,7 +286,7 @@ fun FilterBar(
     onShareList: () -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().background(C.Panel).padding(horizontal = 12.dp, vertical = 4.dp),
+        Modifier.fillMaxWidth().background(C.Ink).padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -246,71 +294,27 @@ fun FilterBar(
             val n = shots.count { f.matches(it) }
             val on = f == filter
             Text(
-                "${f.label} $n", color = if (on) C.Ink else C.Cream, fontSize = 12.sp,
+                "${f.label}  $n", style = T.Small.copy(color = if (on) C.Ink else C.Cream),
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) C.Gold else C.Raised)
                     .clickable { onFilter(f) }.padding(horizontal = 12.dp, vertical = 5.dp),
             )
         }
         Spacer(Modifier.weight(1f))
-        Text(
-            "Copy pick list", color = C.Cream, fontSize = 12.sp,
-            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShareList).padding(horizontal = 10.dp, vertical = 5.dp),
-        )
-        Text(
-            "Save picks to Gallery", color = C.Gold, fontSize = 12.sp,
-            modifier = Modifier.clip(RoundedCornerShape(50)).border(1.dp, C.Gold, RoundedCornerShape(50))
-                .clickable(onClick = onExport).padding(horizontal = 12.dp, vertical = 5.dp),
-        )
+        ActionChip(Glyph.Copy, "Pick list", onShareList)
+        ActionChip(Glyph.Export, "Save picks to Gallery", onExport, accent = true)
     }
 }
 
-/** ★★★★★ and ♥ for the selected shot. */
 @Composable
-fun RatingControls(rating: Int, pick: Boolean, onRate: (Int) -> Unit, onPick: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        for (i in 1..5) {
-            Text(
-                if (i <= rating) "★" else "☆", color = if (i <= rating) C.Gold else C.Muted, fontSize = 22.sp,
-                modifier = Modifier.clip(CircleShape).clickable { onRate(i) }.padding(horizontal = 3.dp),
-            )
-        }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            if (pick) "♥ Pick" else "♡ Pick", color = if (pick) C.Ink else C.Cream, fontSize = 14.sp,
-            modifier = Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.Gold else C.Raised)
-                .clickable(onClick = onPick).padding(horizontal = 12.dp, vertical = 5.dp),
-        )
-    }
-}
-
-/** Exposure settings with ‹ › steppers. */
-@Composable
-fun CameraPanel(settings: List<CameraSetting>, onStep: (SettingId, Int) -> Unit) {
-    if (settings.isEmpty()) return
-    Column(
-        Modifier.fillMaxWidth().background(C.Raised, RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 6.dp),
+private fun ActionChip(glyph: Glyph, label: String, onClick: () -> Unit, accent: Boolean = false) {
+    Row(
+        Modifier.clip(RoundedCornerShape(50))
+            .then(if (accent) Modifier.border(1.dp, C.Gold, RoundedCornerShape(50)) else Modifier)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("CAMERA", color = C.Muted, fontSize = 10.sp, letterSpacing = 1.sp, modifier = Modifier.padding(vertical = 4.dp))
-        for (s in settings) {
-            Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(s.id.label, color = C.Muted, fontSize = 12.sp, modifier = Modifier.width(72.dp))
-                if (s.adjustable) StepButton("‹") { onStep(s.id, -1) }
-                Text(
-                    s.display, color = C.Cream, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 1,
-                )
-                if (s.adjustable) StepButton("›") { onStep(s.id, 1) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StepButton(label: String, onClick: () -> Unit) {
-    Box(
-        Modifier.size(38.dp).clip(CircleShape).background(C.Panel).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = C.Gold, fontSize = 22.sp)
+        Icon(glyph, if (accent) C.Gold else C.Cream, size = 14.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = T.Small.copy(color = if (accent) C.Gold else C.Cream))
     }
 }
