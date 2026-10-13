@@ -1,126 +1,103 @@
 # MIROIR Tether — progress & handoff
 
-_Last updated: 13 Oct 2026 · latest tested build: **11** · build B (crop overlays + client view) awaiting test_
+_Last updated: 13 Oct 2026 · latest build: **22** · tested on the tablet up to build 21 (Z8 + A7 III)_
 
-Android app (Samsung tablet) for USB tethering of the **Nikon Z8** and **Sony A7 III**, built for MIROIR Studio's
-food and product shoots.
+Android app (Samsung tablet, also phones) for USB tethering of the **Nikon Z8** and **Sony A7 III**, built for
+MIROIR Studio's food and product shoots.
 
 - **Code:** `tether/` on branch `claude/camera-tethering-mobile-app-g2yi23` of `KhalidArbaoui/MiroirStudio`
 - **Install builds:** https://github.com/KhalidArbaoui/MiroirStudio/releases (newest at the top, `MIROIR-Tether-N.apk`)
 - Every push to the branch runs the tests and publishes a new APK release automatically.
+- **Design preview** (clickable replica, change the look here first, then port to the app):
+  https://claude.ai/artifact/TJppPrCYMNb6hUkG9YEMhw — matches build 16; not yet updated for the
+  settings pick list (build 19+) or the phone top bar (build 22).
 
-## Status
+## What the app does (all working)
 
-| Feature | Z8 | A7 III |
+| Area | Features |
+|---|---|
+| Connection | USB tethering, 16 KB reads for Samsung, **auto-reconnect** on replug / USB error (live view resumes), crash recorder + persistent log (≡ → Share log) |
+| Review | Full-quality image, Focus 100% loupe, histogram, clipping overlay, grey-card WB check, pinch/double-tap zoom, viewer background K/G/L |
+| Framing | **Crop overlays** 4:5 / 1:1 / 9:16 / 16:9, **drag the frame onto the subject** (double-tap re-centres), rule-of-thirds grid |
+| Live view | Live view + live histogram, **tap-to-focus** (box: white → green locked / amber camera's own point / red failed), AF button, **reference overlay** of a previous dish with opacity slider, "Receiving…" notice during downloads |
+| Orientation | Live view turns upright for a **vertical camera, both sides** (from the photo's orientation incl. RAW-only; manual 0°/90°/270° on the rail); rotation lock AUTO / LAND / PORT; portrait layout |
+| Camera control | Shutter / aperture / ISO / EV / WB / Kelvin with ‹ › steps, **tap a value for a pick list** (full stops highlighted); exposure meter |
+| Selects & delivery | Stars, Pick, filters, Save picks to Gallery, pick list for Lightroom, **Send to client** (WhatsApp / email), **client view** full-screen with Approve |
+| Warnings | Camera battery 20 % / 10 %, card < 100 shots, shots left in the status chip |
+| Branding | MIROIR Studio logo (top bar + client view), violet accent on neutral greys |
+| Devices | Android 9+; tablet and phone layouts (phone: guide/log in ⋯ menu) |
+
+## Camera notes
+
+| | Nikon Z8 | Sony A7 III |
 |---|---|---|
-| USB tethering, full-quality image, Focus 100% | ✅ | ✅ |
-| Histogram, clipping overlay, grey-card WB check | ✅ | ✅ |
-| Ratings, picks, Save picks to Gallery, pick list for Lightroom | ✅ | ✅ |
-| Camera control: shutter / aperture / ISO / EV / WB | ✅ | ✅ (aperture needs lens ring on A) |
-| Live view + AF + grid + live histogram | ✅ | ✅ |
-| Pro UI: neutral greys, tether bar, tool rail, exposure meter | ✅ | ✅ |
-| Crop overlays 4:5 / 1:1 / 9:16 / 16:9 (tool rail, works in live view) | 🧪 | 🧪 |
-| Client view: full-screen photo + Approve button (screen icon, top bar) | 🧪 | 🧪 |
-| Build 15: movable crop (drag; double-tap re-centres), hide filmstrip, MIROIR logo, violet accent | 🧪 | 🧪 |
-| Build 15: rotation lock AUTO/LAND/PORT + portrait layout | 🧪 | 🧪 |
-| Build 15: tap-to-focus in live view (box: white → green / red) | 🧪 | 🧪 (point move unconfirmed) |
-| Build 16: reference overlay over live view (Shot → "Use as overlay", opacity slider) | 🧪 | 🧪 |
-| Build 16: auto-reconnect (replug or USB error, 3 tries; live view resumes) | 🧪 | 🧪 |
-| Build 16: battery 20 % / 10 % and card (<100 shots) warnings; shots left in the status chip | 🧪 | 🧪 |
-| Build 16: "Send to client" — picks (or current shot) to WhatsApp / email | 🧪 | 🧪 |
+| Settings | Direct set, instant | Dial clicks (burst, ~1 s for a big jump); shutter/aperture/EV list from Sony's standard stops |
+| Tap-to-focus | ✅ moves the point (needs AF-S + Single-point/Wide-area, not Auto-area) | Can't take a focus point over USB → amber box; set Flexible Spot on the camera, tablet AF focuses there |
+| Aperture | ✅ | Needs the lens aperture ring on **A** ("Ring on A?" label) |
+| Other bodies, same driver | Z9, Z6/Z7 II–III, Zf, DSLRs with live view (untested) | A7 IV, A7R/A7S, A9, A1, A6xxx with PC Remote (untested; newer bodies may support focus point) |
+| Other brands | Fujifilm, Panasonic, OM, Pentax, Leica = basic PTP (photos come across). **Canon EOS not supported yet.** | |
 
 ## Camera setup card (keep in the bag)
 
 **Nikon Z8**
 - Airplane mode ON · USB power delivery OFF
 - RAW + JPEG fine (L) · sRGB · Tone mode SDR · Active D-Lighting OFF
-- Custom setting **d8 "Apply settings to live view" ON** (otherwise live view/meter don't show the real exposure)
+- Custom setting **d8 "Apply settings to live view" ON**
+- Focus: **AF-S** + **Single-point** (tap-to-focus) · Auto image rotation ON
 
 **Sony A7 III**
 - USB Connection = **PC Remote** · USB Power Supply **OFF**
 - PC Remote Function → Still Img. Save Dest. = **PC+Camera**
-- **Live View Display → Setting Effect ON** (otherwise live view looks bright while the photo is dark)
+- **Live View Display → Setting Effect ON**
 - DRO / Auto HDR OFF · sRGB · use the USB-C port
-- **Sigma 24-70: aperture ring on A**, or the tablet can't change the aperture
+- **Sigma 24-70: aperture ring on A** · Focus Area **Flexible Spot (M)**, AF-S
 
 **Tablet & Lightroom**
 - Samsung: Display → Screen mode **Natural**, Eye comfort shield off, fixed brightness ~70–80 %
 - Open the app first, then plug in the camera; choose MIROIR Tether if Samsung asks "Open with…"
 - Lightroom Classic: Preferences → Presets → **Raw Defaults → Camera Settings**
+- Shoot **RAW + JPEG**: faster previews, colours closer to Lightroom
 
 ## Lessons from testing
 
-- Samsung's USB stack rejects 1 MB reads → the app uses 16 KB reads (fixed).
-- RAW-only shooting needs the full RAW transfer for a sharp preview; **RAW + JPEG is fastest**.
-- Sony needs dial "clicks" for shutter/aperture/EV and ISO; the app learns the direction automatically.
-- Sony reports aperture read-only when the lens ring isn't on A (log showed `0x5007 set=false`).
-- Cameras pause live view while focusing; the app now waits up to 4 s before giving up.
-- Live view always streams landscape. Build 17 turns it upright from the last photo's orientation
-  (needs RAW + JPEG or a rotated preview) or the 0°/90°/270° button on the rail; taps map back.
-- Tap-to-focus (build 15/16) didn't move the point on the camera. Build 17 shows an amber box +
-  the reason when the camera refuses, and logs the raw live-view header and the AF response —
-  send that log to finish the fix. Z8 needs AF-S + Single-point/Wide-area (not Auto-area).
-  → Confirmed working on 13 Oct (build 18).
-- Build 19: RAW-only vertical shots now carry the RAW's orientation (NEF/ARW TIFF tag 0x0112), so
-  review shows them upright and live view turns the right way for either side.
-- Sony A7 III (13 Oct): ISO jump crawled (absolute set ignored + retried every click), shutter had
-  no list (camera sends none), aperture showed locked. Build 20: remembers absolute-set failures,
-  clicks in a burst, standard Sony stops for the list, aperture tries the dial ("Ring on A?").
-  Focus: A7 III likely can't take a focus point over USB — app verifies by read-back and says so;
-  green/red from the camera's focus indicator (0xD213).
-- Build 19: tap a value in the tether bar (shutter, aperture, ISO, EV, WB, K) for a pick list;
-  Sony reaches the picked value by dial clicks.
-- Live view also pauses while a shot downloads (~3 s for a 50 MB RAW-only NEF) — looks like a freeze.
-  Build 14 shows "Receiving…" over live view; RAW + JPEG keeps the pause short.
-- Build 14+: if the app crashes, the next launch says so and the log (≡ → Share log) starts with the
-  crash details and the end of the crashed session.
+- Samsung's USB stack rejects 1 MB reads → 16 KB reads.
+- RAW-only needs the full 50 MB NEF for a sharp preview (~2–3 s, live view pauses meanwhile). **RAW + JPEG is fastest.**
+- The JPEG inside a RAW has no orientation → the app copies it from the RAW's TIFF header (tag 0x0112).
+- Live view always streams landscape; the app turns it and maps taps back to sensor coordinates.
+- Nikon tap-to-focus: ChangeAfArea (0x9205) in the live-view header's coordinate space, then AfDrive.
+- Sony A7 III ignores absolute ISO/shutter sets → dial clicks; remembered after the first refusal.
+- Sony reports aperture read-only when the lens ring isn't on A.
+- Cameras pause live view while focusing; the app waits up to 4 s before giving up.
+- Every fix so far came from the log: **≡ → Share log**.
 
-## Ready for other users — roadmap
+## Roadmap — next session
 
-Done (build 22): phone-size top bar (guide/log in a ⋯ menu), honest "basic support" notice for
-non-Nikon/Sony brands, "Supported cameras" in the guide, first-connect setup tip per brand.
+**For the studio (recommended first)**
+1. Use it on 2–3 real client shoots; note anything slow or missing.
+2. Update the design preview with the pick list and phone layout.
+3. Live view 100 % zoom + focus peaking (manual focus on glass / sauces).
+4. Before/after compare of two shots; capture flash + shutter sound.
+5. Dish shot list (tick off dishes, files named by dish).
+6. Lightroom look (LUT) on previews — only if clients comment on colour.
 
-To do, in order:
-1. **Own release key** before anyone else installs (switching later forces an uninstall). Needs a
-   keystore added as GitHub secrets — 10 minutes with the owner.
-2. **Canon EOS driver** (EOS remote mode, GetEvent, RemoteRelease, live view) — needs a Canon body
-   to test. Biggest market after Sony.
-3. **Settings screen**: default file format advice, overlay opacity, rotation default, language.
-4. **Fujifilm / Panasonic** checks with real bodies (standard PTP may already be enough).
-5. Play Store: privacy policy, store listing, screenshots, signed AAB, crash reporting.
-6. Arabic UI (UAE market).
+**For other users (later)**
+1. **Own release key** before anyone else installs (switching later forces an uninstall) — keystore as GitHub
+   secrets, ~10 min with the owner.
+2. **Canon EOS driver** (remote mode, GetEvent, RemoteRelease, live view) — needs a Canon body to test.
+3. Settings screen (overlay opacity, rotation default, language); Fujifilm / Panasonic checks with real bodies.
+4. Play Store: privacy policy, listing, screenshots, signed AAB, crash reporting · Arabic UI.
+5. Own repository `miroir-tether` (don't merge this branch into the website's `main`).
 
-## Next steps (pick one tomorrow)
-
-1. **First real shoot** with the app (recommended) — note anything slow or missing.
-2. **Test build B:** crop button on the tool rail cycles 4:5 → 1:1 → 9:16 → 16:9 → off; screen icon in the
-   top bar opens the client view (Back or ✕ exits). Client "Approve" = Pick, so it lands in the pick list.
-3. **Phase 2d — Lightroom match:** only if a side-by-side comparison shows visible colour differences.
-4. **Own repository:** create `miroir-tether` in GitHub Desktop (File → New Repository → Publish, private),
-   then move `tether/` there. Don't merge this branch into the website's `main`.
-5. Business: package "Live tethered shoot — approve every dish on set" as a premium offer.
-
-## Design preview
-
-Clickable replica of the app for reviewing UI changes before building:
-https://claude.ai/artifact/TJppPrCYMNb6hUkG9YEMhw — change the preview first, then port to the app.
-
-## Smaller backlog
-
-- Next candidates: live view 100 % zoom + focus peaking, before/after compare, capture flash/sound,
-  dish shot list, Lightroom look (LUT) on previews, phone as remote
-- Focus-area size (Pinpoint / Single / Wide) from the tablet — set it on the camera for now
-- Filmstrip: bigger thumbnails option, reject flag
-- Capture feedback: screen flash + shutter sound
-- Before/after compare of two shots
-- Auto-reconnect after a USB drop
-- Release signing key before any Play Store upload (`app/debug.keystore` is a shared dev key)
+**Business:** package "Live tethered shoot — approve every dish on set, matched menu frames, previews on WhatsApp
+before we leave" as a premium line item. Keep the app in-house as an edge; test with 3–5 photographer friends
+before thinking about the Play Store.
 
 ## Developer notes
 
-- `core/` = pure Kotlin (PTP protocol, Nikon/Sony drivers, histogram, RAW preview, settings) — run
-  `./gradlew -PcoreOnly :core:test` (25 tests, no Android SDK needed).
-- `app/` = Android/Compose UI: `ui/TetherApp.kt` (layout), `ui/TetherBar.kt`, `ui/Viewer.kt`, `ui/Panels.kt`,
-  `ui/Icons.kt`, `ui/Theme.kt`; camera loop in `tether/TetherViewModel.kt`; USB in `usb/UsbPtpTransport.kt`.
-- When something fails on a camera: in the app tap **Log (≡) → Share log** and send it — every fix so far came
-  from the log.
+- `core/` = pure Kotlin (PTP, Nikon/Sony/Generic drivers, crop, rotation, RAW orientation, Sony stops, histogram)
+  — `./gradlew -PcoreOnly :core:test` (no Android SDK needed; this cloud machine can't download Gradle deps, CI runs them).
+- `app/` = Android/Compose UI: `ui/TetherApp.kt` (layout, top bar, tool rail), `ui/TetherBar.kt` (settings bar +
+  pick list), `ui/Viewer.kt` (review + live view, crop drag, AF box, overlay), `ui/Panels.kt`, `ui/ClientView.kt`,
+  `ui/Guide.kt`, `ui/Icons.kt`, `ui/Theme.kt`; camera loop in `tether/TetherViewModel.kt`; USB in `usb/UsbPtpTransport.kt`;
+  logo in `res/drawable/miroir_logo.xml` (from the Brand Board artifact).
+- Design-preview source lives in the chat session scratchpad only; rebuild from the artifact (Artifact read) if needed.
