@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -325,16 +326,23 @@ private fun TopBar(
     showStrip: Boolean,
     onStrip: () -> Unit,
 ) {
+    // Phones (< 600 dp): smaller logo, guide and log move into a "more" menu.
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val narrow = maxWidth < 600.dp
     Row(
-        Modifier.fillMaxWidth().height(60.dp).background(C.Ink).padding(horizontal = 18.dp),
+        Modifier.fillMaxWidth().height(if (narrow) 52.dp else 60.dp).background(C.Ink).padding(horizontal = if (narrow) 8.dp else 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(painterResource(R.drawable.miroir_logo), contentDescription = "MIROIR Studio", modifier = Modifier.height(34.dp))
-        Spacer(Modifier.width(12.dp))
-        Text("TETHER", style = T.Label.copy(letterSpacing = 3.sp))
-        Spacer(Modifier.weight(1f))
-        StatusChip(status, onConnect, onDisconnect)
-        Spacer(Modifier.width(10.dp))
+        Image(painterResource(R.drawable.miroir_logo), contentDescription = "MIROIR Studio", modifier = Modifier.height(if (narrow) 24.dp else 34.dp))
+        if (!narrow) {
+            Spacer(Modifier.width(12.dp))
+            Text("TETHER", style = T.Label.copy(letterSpacing = 3.sp))
+        }
+        // The chip takes the space left and shortens its text with "…" on small screens.
+        Box(Modifier.weight(1f).padding(start = 8.dp), contentAlignment = Alignment.CenterEnd) {
+            StatusChip(status, onConnect, onDisconnect)
+        }
+        Spacer(Modifier.width(if (narrow) 2.dp else 10.dp))
         Box(contentAlignment = Alignment.BottomCenter) {
             IconButton(Glyph.Rotate, onRotation, size = 40.dp, active = rotation != RotationLock.Auto)
             Text(rotation.label, style = T.Label.copy(fontSize = 7.sp, letterSpacing = 1.sp))
@@ -342,8 +350,20 @@ private fun TopBar(
         // Hide the filmstrip for a bigger image while shooting.
         IconButton(Glyph.Strip, onStrip, size = 40.dp, active = !showStrip)
         IconButton(Glyph.Present, onClient, size = 40.dp)
-        IconButton(Glyph.Info, onGuide, size = 40.dp)
-        IconButton(Glyph.Log, onLog, size = 40.dp)
+        if (narrow) {
+            var more by remember { mutableStateOf(false) }
+            Box {
+                IconButton(Glyph.More, { more = true }, size = 40.dp)
+                androidx.compose.material3.DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = C.Raised) {
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Camera setup guide", style = T.Body) }, onClick = { more = false; onGuide() })
+                    androidx.compose.material3.DropdownMenuItem(text = { Text("Connection log", style = T.Body) }, onClick = { more = false; onLog() })
+                }
+            }
+        } else {
+            IconButton(Glyph.Info, onGuide, size = 40.dp)
+            IconButton(Glyph.Log, onLog, size = 40.dp)
+        }
+    }
     }
 }
 

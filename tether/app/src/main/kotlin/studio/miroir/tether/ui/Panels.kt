@@ -281,7 +281,7 @@ private fun StatusChipBody(status: CameraStatus, modifier: Modifier) {
     ) {
         Box(Modifier.size(7.dp).background(dot, CircleShape))
         Spacer(Modifier.width(8.dp))
-        Text(label, style = T.Body.copy(fontSize = 13.sp), maxLines = 1)
+        Text(label, style = T.Body.copy(fontSize = 13.sp), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
         status.battery?.let {
             Spacer(Modifier.width(12.dp))
             Battery(it)

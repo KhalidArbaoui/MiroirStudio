@@ -75,6 +75,21 @@ food and product shoots.
 - Build 14+: if the app crashes, the next launch says so and the log (≡ → Share log) starts with the
   crash details and the end of the crashed session.
 
+## Ready for other users — roadmap
+
+Done (build 22): phone-size top bar (guide/log in a ⋯ menu), honest "basic support" notice for
+non-Nikon/Sony brands, "Supported cameras" in the guide, first-connect setup tip per brand.
+
+To do, in order:
+1. **Own release key** before anyone else installs (switching later forces an uninstall). Needs a
+   keystore added as GitHub secrets — 10 minutes with the owner.
+2. **Canon EOS driver** (EOS remote mode, GetEvent, RemoteRelease, live view) — needs a Canon body
+   to test. Biggest market after Sony.
+3. **Settings screen**: default file format advice, overlay opacity, rotation default, language.
+4. **Fujifilm / Panasonic** checks with real bodies (standard PTP may already be enough).
+5. Play Store: privacy policy, store listing, screenshots, signed AAB, crash reporting.
+6. Arabic UI (UAE market).
+
 ## Next steps (pick one tomorrow)
 
 1. **First real shoot** with the app (recommended) — note anything slow or missing.

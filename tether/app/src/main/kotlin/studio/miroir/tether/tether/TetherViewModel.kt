@@ -260,6 +260,17 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             _status.value = CameraStatus(LinkState.Connected, info.model, driver.brand, message = "Ready")
             AppLog.log("Connected to ${driver.brand} ${info.model}")
             reconnectAttempts = 0
+            if (!driver.fullSupport) {
+                val name = studio.miroir.tether.ptp.Ptp.usbVendorNames[device.vendorId] ?: driver.brand
+                AppLog.log("$name: basic PTP support only")
+                showToast(
+                    if (name == "Canon") "Canon EOS isn't supported yet — it uses its own protocol. Photos may not come across."
+                    else "$name: basic support — photos come across; live view and settings may not work. Full support: Nikon and Sony.",
+                )
+            } else if (!prefs.getBoolean("seen_${driver.brand}", false)) {
+                prefs.edit().putBoolean("seen_${driver.brand}", true).apply()
+                showToast("First time with this ${driver.brand}: tap ⓘ for its 1-minute camera setup checklist", error = false)
+            }
             if (dropped) {
                 dropped = false
                 showToast("Camera reconnected", error = false)

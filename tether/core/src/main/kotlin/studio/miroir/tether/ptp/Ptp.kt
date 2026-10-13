@@ -107,6 +107,12 @@ object Ptp {
     const val USB_VENDOR_NIKON = 0x04B0
     const val USB_VENDOR_SONY = 0x054C
 
+    /** Brand names for cameras we only drive with standard PTP. */
+    val usbVendorNames = mapOf(
+        0x04A9 to "Canon", 0x04CB to "Fujifilm", 0x04DA to "Panasonic", 0x07B4 to "OM System",
+        0x25FB to "Pentax", 0x0A17 to "Pentax", 0x1A98 to "Leica", 0x05CA to "Ricoh",
+    )
+
     private val responseNames = mapOf(
         0x2001 to "OK", 0x2002 to "GeneralError", 0x2003 to "SessionNotOpen",
         0x2004 to "InvalidTransactionID", 0x2005 to "OperationNotSupported",

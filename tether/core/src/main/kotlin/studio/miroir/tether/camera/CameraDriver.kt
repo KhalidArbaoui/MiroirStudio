@@ -60,6 +60,9 @@ abstract class CameraDriver(
     protected val options: DriverOptions,
 ) {
     abstract val brand: String
+
+    /** True when this camera has a brand driver (live view, focus, settings), not just standard PTP. */
+    open val fullSupport: Boolean = true
     val model: String get() = session.deviceInfo?.model ?: brand
 
     protected val interruptEvents = ConcurrentLinkedQueue<PtpEvent>()
@@ -198,7 +201,9 @@ abstract class CameraDriver(
 open class GenericDriver(
     session: PtpSession, log: TetherLog, listener: CameraListener, options: DriverOptions,
 ) : CameraDriver(session, log, listener, options) {
-    override val brand = "Camera"
+    override val brand: String
+        get() = session.deviceInfo?.manufacturer?.substringBefore(' ')?.takeIf { it.isNotBlank() } ?: "Camera"
+    override val fullSupport: Boolean get() = this is NikonDriver
     private val seen = HashSet<Long>()
 
     /** File names (without extension) whose JPEG we already have — their RAW isn't needed for preview. */

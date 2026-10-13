@@ -34,7 +34,17 @@ private class GuideSection(val title: String, val items: List<String>)
 
 private val guide = listOf(
     GuideSection(
-        "Nikon Z8",
+        "Supported cameras",
+        listOf(
+            "Full support (tested): Nikon Z8 and Sony A7 III — transfer, live view, focus, all exposure settings.",
+            "Should work fully: other Nikon Z bodies (Z9, Z6/Z7 II–III, Zf) and Nikon DSLRs with live view; Sony Alpha bodies with 'PC Remote' (A7 IV, A7R/A7S, A9, A1, A6xxx).",
+            "Basic support: other brands that speak standard USB camera protocol (Fujifilm, Panasonic, OM System, Pentax/Ricoh, Leica) — photos come across and the shutter may fire; live view and settings may not.",
+            "Not yet: Canon EOS uses its own protocol. Coming with a Canon test body.",
+            "Any Android 9+ tablet or phone with USB-C works. A tablet (10\"+) is best for judging images and showing clients.",
+        ),
+    ),
+    GuideSection(
+        "Nikon Z8 (and other Nikon Z)",
         listOf(
             "Connect with a USB-C to USB-C cable straight into the tablet (no hub).",
             "Network menu → Airplane mode ON (a Wi-Fi/computer link blocks USB).",
@@ -46,7 +56,7 @@ private val guide = listOf(
         ),
     ),
     GuideSection(
-        "Sony A7 III",
+        "Sony A7 III (and other Sony Alpha)",
         listOf(
             "Setup menu → USB Connection → PC Remote.",
             "Network → PC Remote Function → Still Img. Save Dest. → PC+Camera (keeps a copy on the card).",
@@ -70,7 +80,7 @@ private val guide = listOf(
         ),
     ),
     GuideSection(
-        "Samsung tablet screen",
+        "Tablet screen (Samsung settings shown)",
         listOf(
             "Settings → Display → Screen mode → Natural (Vivid oversaturates everything).",
             "Turn OFF Eye comfort shield and Adaptive brightness. Fix brightness around 70–80% and keep it the same every shoot.",
