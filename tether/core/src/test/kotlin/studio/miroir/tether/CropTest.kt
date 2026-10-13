@@ -58,13 +58,16 @@ class CropTest {
     }
 
     @Test fun tapOnRotatedLiveViewMapsToSensor() {
+        fun check(want: Pair<Float, Float>, got: Pair<Float, Float>) {
+            assertEquals(want.first, got.first, eps); assertEquals(want.second, got.second, eps)
+        }
         val r = studio.miroir.tether.camera.LiveRotation
         // Frame turned 90° clockwise for display: the screen's top-left is the sensor's bottom-left.
-        assertEquals(0f to 1f, r.toSensor(0f, 0f, 90))
-        assertEquals(1f to 0f, r.toSensor(0f, 0f, 270))
-        assertEquals(0.25f to 0.4f, r.toSensor(0.6f, 0.25f, 90))
-        assertEquals(0.75f to 0.6f, r.toSensor(0.6f, 0.25f, 270))
-        assertEquals(0.3f to 0.7f, r.toSensor(0.3f, 0.7f, 0))
+        check(0f to 1f, r.toSensor(0f, 0f, 90))
+        check(1f to 0f, r.toSensor(0f, 0f, 270))
+        check(0.25f to 0.4f, r.toSensor(0.6f, 0.25f, 90))
+        check(0.75f to 0.6f, r.toSensor(0.6f, 0.25f, 270))
+        check(0.3f to 0.7f, r.toSensor(0.3f, 0.7f, 0))
     }
 
     @Test fun nikonHeaderLittleEndianFallback() {
