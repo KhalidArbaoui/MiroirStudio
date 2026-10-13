@@ -231,7 +231,11 @@ fun LiveViewPane(
     onCropCenter: (Offset) -> Unit = {},
     afMark: AfMark? = null,
     onFocusAt: ((Float, Float) -> Unit)? = null,
+    /** Reference shot drawn over the live image at [overlayAlpha]. */
+    overlay: Bitmap? = null,
+    overlayAlpha: Float = 0.4f,
 ) {
+    val overlayImg = remember(overlay) { overlay?.asImageBitmap() }
     var box by remember { mutableStateOf(IntSize.Zero) }
     val img = remember(frame) { frame?.asImageBitmap() }
     val imgNow by rememberUpdatedState(img)
@@ -279,6 +283,12 @@ fun LiveViewPane(
             Text("Starting live view…", color = C.Muted, fontSize = 15.sp)
         } else {
             Image(img, "Live view", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
+            overlayImg?.let {
+                Image(
+                    it, "Reference overlay", Modifier.fillMaxSize(), contentScale = ContentScale.Fit,
+                    alpha = overlayAlpha, filterQuality = FilterQuality.Low,
+                )
+            }
             Canvas(Modifier.fillMaxSize()) {
                 val sc = minOf(size.width / img.width, size.height / img.height)
                 val w = img.width * sc

@@ -124,6 +124,22 @@ abstract class CameraDriver(
         if (r.ok && r.data.isNotEmpty()) r.data[0].toInt() and 0xFF else null
     }.getOrNull()
 
+    /** Shots the memory card(s) can still take, as the camera estimates it; null if unknown. */
+    open fun shotsLeft(): Long? = runCatching {
+        val ids = session.transaction(Ptp.OP_GET_STORAGE_IDS)
+        if (!ids.ok) return@runCatching null
+        val list = studio.miroir.tether.ptp.ByteReader(ids.data).u32Array()
+        var total = 0L
+        var known = false
+        for (id in list) {
+            if (id and 0xFFFF == 0L) continue // no card in this slot
+            val r = session.transaction(Ptp.OP_GET_STORAGE_INFO, longArrayOf(id))
+            val n = if (r.ok) StorageSpace.freeImages(r.data) else null
+            if (n != null) { total += n; known = true }
+        }
+        if (known) total else null
+    }.getOrNull()
+
     protected fun drainInterruptEvents(): List<PtpEvent> {
         val out = ArrayList<PtpEvent>()
         while (true) out.add(interruptEvents.poll() ?: break)
@@ -291,5 +307,27 @@ open class GenericDriver(
     companion object {
         /** How long to wait for the JPEG half of a RAW+JPEG pair before treating a RAW as RAW-only. */
         const val RAW_WAIT_MS = 1500L
+    }
+}
+
+object StorageSpace {
+    /** FreeSpaceInImages from a StorageInfo dataset (after type, filesystem, access, two u64 sizes). */
+    fun freeImages(d: ByteArray): Long? {
+        if (d.size < 26) return null
+        val r = studio.miroir.tether.ptp.ByteReader(d, 22)
+        return r.u32().takeIf { it != 0xFFFFFFFFL }
+    }
+}
+
+/** Warns once as a level drops past each threshold; re-arms when it rises again (battery swapped). */
+class LowLevelAlarm(private val thresholds: List<Int>) {
+    private val fired = HashSet<Int>()
+
+    /** Returns the threshold just crossed, or null. */
+    fun check(level: Int): Int? {
+        fired.removeAll { level > it + 5 }
+        val hit = thresholds.filter { level <= it && it !in fired }.minOrNull() ?: return null
+        fired += thresholds.filter { level <= it }
+        return hit
     }
 }

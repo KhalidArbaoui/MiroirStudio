@@ -13,6 +13,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -25,6 +26,7 @@ import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.camera.DownloadedFile
 import studio.miroir.tether.camera.DriverOptions
 import studio.miroir.tether.camera.FocusResult
+import studio.miroir.tether.camera.LowLevelAlarm
 import studio.miroir.tether.image.JpegExtractor
 import studio.miroir.tether.image.NeutralSample
 import studio.miroir.tether.ptp.PtpEvent
@@ -47,6 +49,8 @@ data class CameraStatus(
     val brand: String = "",
     val battery: Int? = null,
     val message: String = "",
+    /** Shots left on the camera's card(s), when the camera reports it. */
+    val shotsLeft: Long? = null,
 )
 
 enum class PreviewSource(val label: String) {
@@ -149,6 +153,14 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         runCatching { RotationLock.valueOf(prefs.getString("rotation", null) ?: "Auto") }.getOrDefault(RotationLock.Auto),
     )
 
+    /** Reference shot shown over live view to match angle, scale and position across a set. */
+    private val _overlayId = MutableStateFlow<Long?>(null)
+    val overlayId: StateFlow<Long?> = _overlayId
+    private val _overlay = MutableStateFlow<Bitmap?>(null)
+    val overlay: StateFlow<Bitmap?> = _overlay
+    val overlayAlpha = MutableStateFlow(0.4f)
+    val overlayVisible = MutableStateFlow(true)
+
     private val _loupe = MutableStateFlow<Bitmap?>(null)
     val loupe: StateFlow<Bitmap?> = _loupe
 
@@ -174,23 +186,55 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
 
     // ---------------------------------------------------------------- connection
 
+    /** True after the user tapped Disconnect: don't reconnect on our own. */
+    @Volatile private var userStopped = false
+    @Volatile private var dropped = false
+    @Volatile private var liveBeforeDrop = false
+    private var reconnectAttempts = 0
+
     fun connect(manager: UsbManager, device: UsbDevice) {
         if (!running.compareAndSet(false, true)) return
+        userStopped = false
         _status.value = CameraStatus(LinkState.Connecting, message = "Connecting to ${device.productName ?: "camera"}…")
         cameraThread.execute { runCamera(manager, device) }
     }
 
     fun disconnect() {
+        userStopped = true
         running.set(false)
     }
 
     fun onUsbDetached() {
-        if (running.get()) AppLog.log("Camera unplugged")
+        if (running.get()) {
+            AppLog.log("Camera unplugged — plug it back in and the app reconnects")
+            markDropped()
+        }
         running.set(false)
+    }
+
+    private fun markDropped() {
+        if (userStopped) return
+        dropped = true
+        liveBeforeDrop = liveViewWanted.value || liveBeforeDrop
+    }
+
+    /** After a USB error with the camera still plugged in, try again a few times. */
+    private fun scheduleReconnect(manager: UsbManager, device: UsbDevice) {
+        if (userStopped || reconnectAttempts >= 3) return
+        if (manager.deviceList.values.none { it.deviceName == device.deviceName }) return // unplugged: wait for replug
+        reconnectAttempts++
+        val wait = 1500L * reconnectAttempts
+        AppLog.log("Reconnecting in ${wait / 1000.0} s (attempt $reconnectAttempts of 3)")
+        _status.value = CameraStatus(LinkState.Connecting, message = "Connection lost — reconnecting…")
+        viewModelScope.launch {
+            delay(wait)
+            if (!userStopped && !running.get()) connect(manager, device)
+        }
     }
 
     private fun runCamera(manager: UsbManager, device: UsbDevice) {
         var transport: UsbPtpTransport? = null
+        var reconnect = false
         try {
             AppLog.log("Opening ${device.manufacturerName} ${device.productName} (VID %04X PID %04X)".format(device.vendorId, device.productId))
             transport = UsbPtpTransport.open(manager, device)
@@ -204,6 +248,15 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             driver.connect()
             _status.value = CameraStatus(LinkState.Connected, info.model, driver.brand, message = "Ready")
             AppLog.log("Connected to ${driver.brand} ${info.model}")
+            reconnectAttempts = 0
+            if (dropped) {
+                dropped = false
+                showToast("Camera reconnected", error = false)
+                if (liveBeforeDrop) liveViewWanted.value = true
+            }
+            liveBeforeDrop = false
+            val batteryAlarm = LowLevelAlarm(listOf(20, 10))
+            val cardAlarm = LowLevelAlarm(listOf(100, 20))
 
             val events = startEventReader(transport, driver)
             _liveSupported.value = driver.supportsLiveView
@@ -303,7 +356,16 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                     if (now - lastBattery > 30_000) {
                         lastBattery = now
                         val level = driver.batteryLevel()
-                        _status.update { it.copy(battery = level) }
+                        val left = driver.shotsLeft()
+                        _status.update { it.copy(battery = level, shotsLeft = left) }
+                        if (level != null) batteryAlarm.check(level)?.let {
+                            AppLog.log("Battery $level%")
+                            showToast("Camera battery $level% — swap it or plug in power soon")
+                        }
+                        if (left != null) cardAlarm.check(left.coerceAtMost(10_000).toInt())?.let {
+                            AppLog.log("Card: $left shots left")
+                            showToast("Memory card almost full — about $left shots left")
+                        }
                     }
                     failures = 0
                 } catch (e: PtpException) {
@@ -325,6 +387,8 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         } catch (t: Throwable) {
             AppLog.error("Connection lost", t)
             _status.value = CameraStatus(LinkState.Error, message = t.message ?: "Connection failed")
+            markDropped()
+            reconnect = true
         } finally {
             running.set(false)
             liveViewWanted.value = false
@@ -333,6 +397,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             _transfer.value = null
             transport?.close()
         }
+        if (reconnect) scheduleReconnect(manager, device)
     }
 
     /**
@@ -489,6 +554,30 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             }
             showToast("$n pick${if (n == 1) "" else "s"} saved to Gallery › MIROIR Tether", error = n == 0)
         }
+    }
+
+    /** Use [id] as the reference overlay over live view; same shot again clears it. */
+    fun toggleOverlay(id: Long) {
+        if (_overlayId.value == id) return clearOverlay()
+        val shot = _shots.value.firstOrNull { it.id == id } ?: return
+        _overlayId.value = id
+        overlayVisible.value = true
+        viewModelScope.launch {
+            _overlay.value = withContext(Dispatchers.IO) { ImageProcessor.thumbnail(shot.previewFile, shot.exif.rotation, 1600) }
+        }
+        showToast("${shot.baseName} is the overlay — turn on LIVE to line up the next dish", error = false)
+    }
+
+    fun clearOverlay() {
+        _overlayId.value = null
+        _overlay.value = null
+    }
+
+    /** JPEGs to send to the client: the picks, or the shot on screen when nothing is picked. */
+    fun filesToShare(): List<File> {
+        val list = _shots.value
+        val chosen = list.filter { it.pick }.ifEmpty { list.filter { it.id == _selectedId.value } }
+        return chosen.map { it.jpegFile ?: it.previewFile }.filter { it.exists() }
     }
 
     fun setCopyRaw(on: Boolean) {

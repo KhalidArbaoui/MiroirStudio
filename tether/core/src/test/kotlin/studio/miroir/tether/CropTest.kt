@@ -45,6 +45,18 @@ class CropTest {
         assertNull(studio.miroir.tether.camera.NikonLiveHeader.parse(byteArrayOf(-1, -40) + ByteArray(40)))
     }
 
+    @Test fun storageFreeImages() {
+        val w = studio.miroir.tether.ptp.ByteWriter().u16(4).u16(3).u16(0).u32(0L).u32(16L).u32(0L).u32(8L).u32(1234L)
+        assertEquals(1234L, studio.miroir.tether.camera.StorageSpace.freeImages(w.toByteArray()))
+    }
+
+    @Test fun batteryAlarmFiresOncePerThreshold() {
+        val a = studio.miroir.tether.camera.LowLevelAlarm(listOf(20, 10))
+        assertNull(a.check(50)); assertEquals(20, a.check(19)); assertNull(a.check(18))
+        assertEquals(10, a.check(9)); assertNull(a.check(8))
+        assertNull(a.check(100)); assertEquals(10, a.check(5)) // swapped battery, then a flat one
+    }
+
     @Test fun cyclesBackToOff() {
         var r = CropRatio.Off
         repeat(CropRatio.entries.size) { r = r.next() }

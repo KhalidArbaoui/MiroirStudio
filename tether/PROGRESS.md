@@ -24,6 +24,10 @@ food and product shoots.
 | Build 15: movable crop (drag; double-tap re-centres), hide filmstrip, MIROIR logo, violet accent | 🧪 | 🧪 |
 | Build 15: rotation lock AUTO/LAND/PORT + portrait layout | 🧪 | 🧪 |
 | Build 15: tap-to-focus in live view (box: white → green / red) | 🧪 | 🧪 (point move unconfirmed) |
+| Build 16: reference overlay over live view (Shot → "Use as overlay", opacity slider) | 🧪 | 🧪 |
+| Build 16: auto-reconnect (replug or USB error, 3 tries; live view resumes) | 🧪 | 🧪 |
+| Build 16: battery 20 % / 10 % and card (<100 shots) warnings; shots left in the status chip | 🧪 | 🧪 |
+| Build 16: "Send to client" — picks (or current shot) to WhatsApp / email | 🧪 | 🧪 |
 
 ## Camera setup card (keep in the bag)
 
@@ -73,6 +77,9 @@ https://claude.ai/artifact/TJppPrCYMNb6hUkG9YEMhw — change the preview first, 
 
 ## Smaller backlog
 
+- Next candidates: live view 100 % zoom + focus peaking, before/after compare, capture flash/sound,
+  dish shot list, Lightroom look (LUT) on previews, phone as remote
+- Focus-area size (Pinpoint / Single / Wide) from the tablet — set it on the camera for now
 - Filmstrip: bigger thumbnails option, reject flag
 - Capture feedback: screen flash + shutter sound
 - Before/after compare of two shots

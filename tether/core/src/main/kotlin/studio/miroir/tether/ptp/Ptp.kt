@@ -14,6 +14,7 @@ object Ptp {
     const val OP_OPEN_SESSION = 0x1002
     const val OP_CLOSE_SESSION = 0x1003
     const val OP_GET_STORAGE_IDS = 0x1004
+    const val OP_GET_STORAGE_INFO = 0x1005
     const val OP_GET_OBJECT_INFO = 0x1008
     const val OP_GET_OBJECT = 0x1009
     const val OP_GET_THUMB = 0x100A

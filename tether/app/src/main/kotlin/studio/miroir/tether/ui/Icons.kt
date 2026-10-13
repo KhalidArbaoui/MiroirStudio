@@ -29,7 +29,7 @@ import kotlin.math.sin
 /** The app's line-icon set, drawn on a 24-unit grid with one stroke weight. */
 enum class Glyph {
     ChevronLeft, ChevronRight, Clipping, Focus, Eyedropper, Grid, Background,
-    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy, Crop, Present, Strip, Rotate,
+    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy, Crop, Present, Strip, Rotate, Overlay, Share,
 }
 
 @Composable
@@ -172,6 +172,17 @@ private fun DrawScope.drawGlyph(g: Glyph, c: Color) {
             rect(7f, 3f, 10f, 18f)
             path(3.5f to 9f, 4.2f to 6.8f, 6f to 5f); path(3f to 5.5f, 6f to 5f, 6.5f to 8f)
             path(20.5f to 15f, 19.8f to 17.2f, 18f to 19f); path(21f to 18.5f, 18f to 19f, 17.5f to 16f)
+        }
+        Glyph.Overlay -> {
+            // Two offset frames: a reference laid over the live image.
+            rect(3f, 3f, 13f, 13f)
+            rect(8f, 8f, 13f, 13f)
+        }
+        Glyph.Share -> {
+            drawCircle(c, 2.6f * u, p(18f, 5.5f), style = stroke)
+            drawCircle(c, 2.6f * u, p(6f, 12f), style = stroke)
+            drawCircle(c, 2.6f * u, p(18f, 18.5f), style = stroke)
+            line(8.3f, 10.8f, 15.7f, 6.7f); line(8.3f, 13.2f, 15.7f, 17.3f)
         }
         Glyph.Present -> {
             // Screen on a stand: show the client.

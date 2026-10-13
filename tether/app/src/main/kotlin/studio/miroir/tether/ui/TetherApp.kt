@@ -80,6 +80,10 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val liveSupported by vm.liveSupported.collectAsStateWithLifecycle()
         val afMark by vm.afMark.collectAsStateWithLifecycle()
         val rotation by vm.rotation.collectAsStateWithLifecycle()
+        val overlayId by vm.overlayId.collectAsStateWithLifecycle()
+        val overlay by vm.overlay.collectAsStateWithLifecycle()
+        val overlayAlpha by vm.overlayAlpha.collectAsStateWithLifecycle()
+        val overlayVisible by vm.overlayVisible.collectAsStateWithLifecycle()
         val context = androidx.compose.ui.platform.LocalContext.current
 
         var showGrid by rememberSaveable { mutableStateOf(false) }
@@ -119,6 +123,26 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
             }
         }
 
+        // Send the picks (or the shot on screen) to the client — usually WhatsApp.
+        val sendToClient = {
+            val files = vm.filesToShare()
+            if (files.isEmpty()) {
+                android.widget.Toast.makeText(context, "Nothing to send yet", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                val uris = ArrayList(files.map { androidx.core.content.FileProvider.getUriForFile(context, context.packageName + ".files", it) })
+                val send = android.content.Intent(
+                    if (uris.size == 1) android.content.Intent.ACTION_SEND else android.content.Intent.ACTION_SEND_MULTIPLE,
+                ).setType("image/jpeg").addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                if (uris.size == 1) send.putExtra(android.content.Intent.EXTRA_STREAM, uris[0])
+                else send.putParcelableArrayListExtra(android.content.Intent.EXTRA_STREAM, uris)
+                send.clipData = android.content.ClipData.newRawUri("", uris[0]).apply {
+                    uris.drop(1).forEach { addItem(android.content.ClipData.Item(it)) }
+                }
+                val what = if (uris.size == 1) "1 photo" else "${uris.size} photos"
+                context.startActivity(android.content.Intent.createChooser(send, "Send $what to the client"))
+            }
+        }
+
         val stage: @Composable (Modifier) -> Unit = { m ->
             Box(m) {
                 val a = analysis
@@ -126,6 +150,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                     live -> LiveViewPane(
                         liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize(), crop,
                         cropCenter = cropCenter, onCropCenter = setCropCenter, afMark = afMark, onFocusAt = vm::focusAt,
+                        overlay = if (overlayVisible) overlay else null, overlayAlpha = overlayAlpha,
                     )
                     a != null -> Viewer(
                         a, C.ViewerBackgrounds[bgIndex], showClipping, showGrid, tool, loupe, neutral,
@@ -141,6 +166,8 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                 if (live || a != null) {
                     ToolRail(
                         live = live, showClipping = showClipping, tool = tool, showGrid = showGrid, bgIndex = bgIndex, crop = crop,
+                        overlayOn = if (overlayId != null) overlayVisible else null,
+                        onOverlay = { vm.overlayVisible.value = !overlayVisible },
                         onClipping = { vm.showClipping.value = !showClipping },
                         onLoupe = { vm.setTool(Tool.Loupe) },
                         onGreyCard = { vm.setTool(Tool.WhiteBalance) },
@@ -182,7 +209,17 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                     onPick = { infoShot?.let { vm.togglePick(it.id) } },
                     title = if (live) "Last shot" else "Shot",
                     showThumb = live,
+                    isOverlay = infoShot != null && infoShot.id == overlayId,
+                    onOverlay = infoShot?.let { s -> { vm.toggleOverlay(s.id) } },
                 )
+                overlayId?.let { id ->
+                    OverlayPanel(
+                        name = shots.firstOrNull { it.id == id }?.baseName ?: "",
+                        alpha = overlayAlpha, visible = overlayVisible,
+                        onAlpha = { vm.overlayAlpha.value = it }, onVisible = { vm.overlayVisible.value = it },
+                        onClear = vm::clearOverlay,
+                    )
+                }
                 Column {
                     SectionLabel("Session")
                     ToggleRow("Follow new shots", follow, { vm.followNewest.value = it })
@@ -246,7 +283,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                     }
                     // The filmstrip appears with the first shot, so the image gets the space until then.
                     if (shots.isNotEmpty() && showStrip) {
-                        FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList)
+                        FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList, sendToClient)
                         Filmstrip(visibleShots, selectedId, { id ->
                             // Tapping a shot leaves live view so you can review it.
                             if (liveWanted) vm.toggleLiveView()
@@ -311,6 +348,9 @@ private fun ToolRail(
     showGrid: Boolean,
     bgIndex: Int,
     crop: CropRatio,
+    /** null = no overlay chosen; otherwise whether it's showing. */
+    overlayOn: Boolean?,
+    onOverlay: () -> Unit,
     onClipping: () -> Unit,
     onLoupe: () -> Unit,
     onGreyCard: () -> Unit,
@@ -336,6 +376,7 @@ private fun ToolRail(
             IconButton(Glyph.Focus, onLoupe, active = tool == Tool.Loupe)
             IconButton(Glyph.Eyedropper, onGreyCard, active = tool == Tool.WhiteBalance)
         }
+        if (live && overlayOn != null) IconButton(Glyph.Overlay, onOverlay, active = overlayOn)
         IconButton(Glyph.Grid, onGrid, active = showGrid)
         // Tap to cycle 4:5 → 1:1 → 9:16 → 16:9 → off.
         Box(contentAlignment = Alignment.BottomCenter) {

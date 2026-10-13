@@ -36,6 +36,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> vm.onUsbDetached()
+                // Camera plugged back in while the app is open: reconnect without a trip to the menu.
+                UsbManager.ACTION_USB_DEVICE_ATTACHED ->
+                    if (UsbPtpTransport.findPtpInterface(device) != null) request(device)
             }
         }
     }
@@ -57,6 +60,7 @@ class MainActivity : ComponentActivity() {
         val filter = IntentFilter().apply {
             addAction(ACTION_USB_PERMISSION)
             addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
         }
         ContextCompat.registerReceiver(this, usbReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
 

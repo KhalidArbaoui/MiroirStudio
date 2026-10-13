@@ -126,6 +126,8 @@ fun ShotInfo(
     onPick: () -> Unit,
     title: String = "Shot",
     showThumb: Boolean = false,
+    isOverlay: Boolean = false,
+    onOverlay: (() -> Unit)? = null,
 ) {
     Column {
         SectionLabel(title)
@@ -157,6 +159,22 @@ fun ShotInfo(
         }
         Spacer(Modifier.height(10.dp))
         RatingControls(shot.rating, shot.pick, onRate, onPick)
+        if (onOverlay != null) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(if (isOverlay) C.AccentDim else C.Raised)
+                    .border(1.dp, if (isOverlay) C.Accent else C.Line, RoundedCornerShape(50))
+                    .clickable(onClick = onOverlay).padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Glyph.Overlay, if (isOverlay) C.Accent else C.Cream, size = 16.dp)
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (isOverlay) "Overlay on · tap to remove" else "Use as overlay for the next dish",
+                    style = T.Body.copy(color = if (isOverlay) C.Accent else C.Cream, fontSize = 13.sp),
+                )
+            }
+        }
     }
 }
 
@@ -270,6 +288,10 @@ private fun StatusChipBody(status: CameraStatus, modifier: Modifier) {
             Spacer(Modifier.width(5.dp))
             Text("$it%", style = T.Small.copy(color = if (it < 20) C.Bad else C.Muted))
         }
+        status.shotsLeft?.let {
+            Spacer(Modifier.width(10.dp))
+            Text("$it left", style = T.Small.copy(color = if (it < 100) C.Bad else C.Muted))
+        }
     }
 }
 
@@ -325,6 +347,7 @@ fun FilterBar(
     onFilter: (ShotFilter) -> Unit,
     onExport: () -> Unit,
     onShareList: () -> Unit,
+    onSend: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().background(C.Ink).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -342,6 +365,7 @@ fun FilterBar(
         }
         Spacer(Modifier.weight(1f))
         ActionChip(Glyph.Copy, "Pick list", onShareList)
+        ActionChip(Glyph.Share, "Send to client", onSend)
         ActionChip(Glyph.Export, "Save picks to Gallery", onExport, accent = true)
     }
 }
@@ -357,5 +381,37 @@ private fun ActionChip(glyph: Glyph, label: String, onClick: () -> Unit, accent:
         Icon(glyph, if (accent) C.Accent else C.Cream, size = 14.dp)
         Spacer(Modifier.width(6.dp))
         Text(label, style = T.Small.copy(color = if (accent) C.Accent else C.Cream))
+    }
+}
+
+/** Reference overlay controls: which shot, opacity, hide/show, remove. */
+@Composable
+fun OverlayPanel(
+    name: String,
+    alpha: Float,
+    visible: Boolean,
+    onAlpha: (Float) -> Unit,
+    onVisible: (Boolean) -> Unit,
+    onClear: () -> Unit,
+) {
+    Column {
+        SectionLabel("Reference overlay")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(name, style = T.Body, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(
+                "Remove", style = T.Small.copy(color = C.Cream),
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onClear).padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("${(alpha * 100).toInt()}%", style = T.Small, modifier = Modifier.width(40.dp))
+            androidx.compose.material3.Slider(
+                value = alpha, onValueChange = onAlpha, valueRange = 0.15f..0.85f, modifier = Modifier.weight(1f),
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = C.Accent, activeTrackColor = C.Accent, inactiveTrackColor = C.Line,
+                ),
+            )
+        }
+        ToggleRow("Show over live view", visible, onVisible, hint = "Line up angle, scale and position with this shot")
     }
 }
