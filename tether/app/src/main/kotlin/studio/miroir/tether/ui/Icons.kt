@@ -29,7 +29,7 @@ import kotlin.math.sin
 /** The app's line-icon set, drawn on a 24-unit grid with one stroke weight. */
 enum class Glyph {
     ChevronLeft, ChevronRight, Clipping, Focus, Eyedropper, Grid, Background,
-    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy,
+    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy, Crop, Present,
 }
 
 @Composable
@@ -160,5 +160,11 @@ private fun DrawScope.drawGlyph(g: Glyph, c: Color) {
         }
         Glyph.Close -> { line(6f, 6f, 18f, 18f); line(18f, 6f, 6f, 18f) }
         Glyph.Copy -> { rect(8f, 8f, 12f, 12f); path(16f to 5f, 16f to 4f, 4f to 4f, 4f to 16f, 5f to 16f) }
+        Glyph.Crop -> { path(7f to 3f, 7f to 17f, 21f to 17f); path(3f to 7f, 17f to 7f, 17f to 21f) }
+        Glyph.Present -> {
+            // Screen on a stand: show the client.
+            rect(3f, 4f, 18f, 12f, 1.5f)
+            line(12f, 16f, 12f, 20f); line(8f, 20f, 16f, 20f)
+        }
     }
 }

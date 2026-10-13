@@ -1,6 +1,6 @@
 # MIROIR Tether — progress & handoff
 
-_Last updated: 12 Oct 2026 · latest tested build: **11** (build 12 adds guide text only)_
+_Last updated: 13 Oct 2026 · latest tested build: **11** · build B (crop overlays + client view) awaiting test_
 
 Android app (Samsung tablet) for USB tethering of the **Nikon Z8** and **Sony A7 III**, built for MIROIR Studio's
 food and product shoots.
@@ -19,6 +19,8 @@ food and product shoots.
 | Camera control: shutter / aperture / ISO / EV / WB | ✅ | ✅ (aperture needs lens ring on A) |
 | Live view + AF + grid + live histogram | ✅ | ✅ |
 | Pro UI: neutral greys, tether bar, tool rail, exposure meter | ✅ | ✅ |
+| Crop overlays 4:5 / 1:1 / 9:16 / 16:9 (tool rail, works in live view) | 🧪 | 🧪 |
+| Client view: full-screen photo + Approve button (screen icon, top bar) | 🧪 | 🧪 |
 
 ## Camera setup card (keep in the bag)
 
@@ -50,8 +52,8 @@ food and product shoots.
 ## Next steps (pick one tomorrow)
 
 1. **First real shoot** with the app (recommended) — note anything slow or missing.
-2. **Design build B:** crop overlays (4:5 / 9:16 / 1:1 / 16:9), full-screen client mode, client/session name
-   (names the Gallery album and folders).
+2. **Test build B:** crop button on the tool rail cycles 4:5 → 1:1 → 9:16 → 16:9 → off; screen icon in the
+   top bar opens the client view (Back or ✕ exits). Client "Approve" = Pick, so it lands in the pick list.
 3. **Phase 2d — Lightroom match:** only if a side-by-side comparison shows visible colour differences.
 4. **Own repository:** create `miroir-tether` in GitHub Desktop (File → New Repository → Publish, private),
    then move `tether/` there. Don't merge this branch into the website's `main`.

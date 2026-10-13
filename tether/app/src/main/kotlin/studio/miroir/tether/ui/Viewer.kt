@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import studio.miroir.tether.image.CropRatio
 import studio.miroir.tether.image.NeutralSample
 import studio.miroir.tether.tether.Analysis
 import studio.miroir.tether.tether.Tool
@@ -57,6 +58,7 @@ fun Viewer(
     neutral: NeutralSample?,
     onTap: (Float, Float) -> Unit,
     modifier: Modifier = Modifier,
+    crop: CropRatio = CropRatio.Off,
 ) {
     val image = remember(analysis) { analysis.display.asImageBitmap() }
     val mask = remember(analysis) { analysis.clipMask.asImageBitmap() }
@@ -132,7 +134,9 @@ fun Viewer(
             if (showClipping) {
                 drawImage(mask, IntOffset.Zero, IntSize(mask.width, mask.height), dstOffset, dstSize, alpha = 0.9f, filterQuality = FilterQuality.None)
             }
-            if (showGrid) drawThirds(r)
+            val cr = cropRect(r, crop)
+            cr?.let { drawCropMask(r, it) }
+            if (showGrid) drawThirds(cr ?: r)
             marker?.let { m ->
                 val p = Offset(r.left + m.x * r.width, r.top + m.y * r.height)
                 drawCircle(Color.Black, 15.dp.toPx(), p, style = Stroke(4.dp.toPx()))
@@ -199,6 +203,7 @@ fun LiveViewPane(
     background: Color,
     showGrid: Boolean,
     modifier: Modifier = Modifier,
+    crop: CropRatio = CropRatio.Off,
 ) {
     Box(modifier.background(background), contentAlignment = Alignment.Center) {
         if (frame == null) {
@@ -206,16 +211,34 @@ fun LiveViewPane(
         } else {
             val img = remember(frame) { frame.asImageBitmap() }
             Image(img, "Live view", Modifier.fillMaxSize(), contentScale = ContentScale.Fit, filterQuality = FilterQuality.Low)
-            if (showGrid) {
+            if (showGrid || crop != CropRatio.Off) {
                 Canvas(Modifier.fillMaxSize()) {
                     val sc = minOf(size.width / img.width, size.height / img.height)
                     val w = img.width * sc
                     val h = img.height * sc
-                    drawThirds(Rect(Offset((size.width - w) / 2, (size.height - h) / 2), Size(w, h)))
+                    val r = Rect(Offset((size.width - w) / 2, (size.height - h) / 2), Size(w, h))
+                    val cr = cropRect(r, crop)
+                    cr?.let { drawCropMask(r, it) }
+                    if (showGrid) drawThirds(cr ?: r)
                 }
             }
         }
     }
+}
+
+/** The [crop] frame inside the image drawn at [r], or null when cropping is off. */
+private fun cropRect(r: Rect, crop: CropRatio): Rect? = crop.frame(r.width, r.height)?.let { f ->
+    Rect(r.left + f[0] * r.width, r.top + f[1] * r.height, r.left + f[2] * r.width, r.top + f[3] * r.height)
+}
+
+/** Darkens what the crop cuts away from [r] and outlines the kept frame [c]. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawCropMask(r: Rect, c: Rect) {
+    val shade = Color(0xB3000000)
+    drawRect(shade, r.topLeft, Size(r.width, c.top - r.top))
+    drawRect(shade, Offset(r.left, c.bottom), Size(r.width, r.bottom - c.bottom))
+    drawRect(shade, Offset(r.left, c.top), Size(c.left - r.left, c.height))
+    drawRect(shade, Offset(c.right, c.top), Size(r.right - c.right, c.height))
+    drawRect(C.Gold.copy(alpha = 0.8f), c.topLeft, c.size, style = Stroke(1.dp.toPx()))
 }
 
 /** Rule-of-thirds lines over [r]. */

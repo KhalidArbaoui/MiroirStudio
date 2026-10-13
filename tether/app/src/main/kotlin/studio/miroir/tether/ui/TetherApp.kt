@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import studio.miroir.tether.image.CropRatio
 import studio.miroir.tether.tether.AppLog
 import studio.miroir.tether.tether.CameraStatus
 import studio.miroir.tether.tether.LinkState
@@ -77,6 +78,8 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         var showGuide by rememberSaveable { mutableStateOf(false) }
         var showLog by rememberSaveable { mutableStateOf(false) }
         var bgIndex by rememberSaveable { mutableIntStateOf(1) }
+        var crop by rememberSaveable { mutableStateOf(CropRatio.Off) }
+        var clientMode by rememberSaveable { mutableStateOf(false) }
 
         val visibleShots = shots.filter { filter.matches(it) }
         val selected = shots.firstOrNull { it.id == selectedId }
@@ -98,10 +101,10 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
             Box(m) {
                 val a = analysis
                 when {
-                    live -> LiveViewPane(liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize())
+                    live -> LiveViewPane(liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize(), crop)
                     a != null -> Viewer(
                         a, C.ViewerBackgrounds[bgIndex], showClipping, showGrid, tool, loupe, neutral,
-                        onTap = vm::onImageTap, modifier = Modifier.fillMaxSize(),
+                        onTap = vm::onImageTap, modifier = Modifier.fillMaxSize(), crop = crop,
                     )
                     else -> EmptyState(
                         connected = connected, model = status.model, error = status.state == LinkState.Error,
@@ -111,11 +114,12 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                 }
                 if (live || a != null) {
                     ToolRail(
-                        live = live, showClipping = showClipping, tool = tool, showGrid = showGrid, bgIndex = bgIndex,
+                        live = live, showClipping = showClipping, tool = tool, showGrid = showGrid, bgIndex = bgIndex, crop = crop,
                         onClipping = { vm.showClipping.value = !showClipping },
                         onLoupe = { vm.setTool(Tool.Loupe) },
                         onGreyCard = { vm.setTool(Tool.WhiteBalance) },
                         onGrid = { showGrid = !showGrid },
+                        onCrop = { crop = crop.next() },
                         onBackground = { bgIndex = (bgIndex + 1) % C.ViewerBackgrounds.size },
                         onAutofocus = vm::autofocus,
                         modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp),
@@ -164,13 +168,23 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
             )
         }
 
-        Box(Modifier.fillMaxSize().background(C.Ink).safeDrawingPadding()) {
+        if (clientMode) {
+            ClientView(
+                analysis = analysis, selected = selected, index = shots.indexOfFirst { it.id == selectedId },
+                total = shots.size, live = live, liveFrame = liveFrame, crop = crop,
+                onPick = { selected?.let { vm.togglePick(it.id) } },
+                onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
+                onExit = { clientMode = false },
+            )
+            toast?.let { t -> LaunchedEffect(t) { delay(3500); vm.clearToast() } }
+        } else Box(Modifier.fillMaxSize().background(C.Ink).safeDrawingPadding()) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth > 840.dp
                 Column(Modifier.fillMaxSize()) {
                     TopBar(
                         status, onConnect = onConnectRequest, onDisconnect = vm::disconnect,
                         onGuide = { showGuide = true }, onLog = { showLog = true },
+                        onClient = { clientMode = true },
                     )
                     if (wide) {
                         Row(Modifier.weight(1f)) {
@@ -225,6 +239,7 @@ private fun TopBar(
     onDisconnect: () -> Unit,
     onGuide: () -> Unit,
     onLog: () -> Unit,
+    onClient: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().height(60.dp).background(C.Ink).padding(horizontal = 18.dp),
@@ -236,6 +251,7 @@ private fun TopBar(
         Spacer(Modifier.weight(1f))
         StatusChip(status, onConnect, onDisconnect)
         Spacer(Modifier.width(10.dp))
+        IconButton(Glyph.Present, onClient, size = 40.dp)
         IconButton(Glyph.Info, onGuide, size = 40.dp)
         IconButton(Glyph.Log, onLog, size = 40.dp)
     }
@@ -249,10 +265,12 @@ private fun ToolRail(
     tool: Tool,
     showGrid: Boolean,
     bgIndex: Int,
+    crop: CropRatio,
     onClipping: () -> Unit,
     onLoupe: () -> Unit,
     onGreyCard: () -> Unit,
     onGrid: () -> Unit,
+    onCrop: () -> Unit,
     onBackground: () -> Unit,
     onAutofocus: () -> Unit,
     modifier: Modifier = Modifier,
@@ -274,6 +292,11 @@ private fun ToolRail(
             IconButton(Glyph.Eyedropper, onGreyCard, active = tool == Tool.WhiteBalance)
         }
         IconButton(Glyph.Grid, onGrid, active = showGrid)
+        // Tap to cycle 4:5 → 1:1 → 9:16 → 16:9 → off.
+        Box(contentAlignment = Alignment.BottomCenter) {
+            IconButton(Glyph.Crop, onCrop, active = crop != CropRatio.Off)
+            if (crop != CropRatio.Off) Text(crop.label, style = T.Label.copy(fontSize = 8.sp, color = C.Gold))
+        }
         Box(contentAlignment = Alignment.BottomCenter) {
             IconButton(Glyph.Background, onBackground)
             Text(listOf("K", "G", "L")[bgIndex.coerceIn(0, 2)], style = T.Label.copy(fontSize = 8.sp, color = C.Muted))
@@ -282,7 +305,7 @@ private fun ToolRail(
 }
 
 @Composable
-private fun FrameCounter(current: Int, total: Int, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+internal fun FrameCounter(current: Int, total: Int, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier.clip(RoundedCornerShape(50)).background(Color(0xCC000000)).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
