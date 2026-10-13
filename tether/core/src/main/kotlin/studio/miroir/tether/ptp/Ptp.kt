@@ -91,6 +91,8 @@ object Ptp {
     const val SONY_PROP_BATTERY = 0xD218
     /** AF point as (x shl 16) or y on a 640×480 grid. */
     const val SONY_PROP_AF_AREA_POSITION = 0xD2DC
+    /** 2 = focus locked (green dot in the viewfinder). */
+    const val SONY_PROP_FOCUS_FOUND = 0xD213
     const val SONY_CTRL_S1_HALF_PRESS = 0xD2C1
     const val SONY_CTRL_S2_RELEASE = 0xD2C2
     const val SONY_PRESS = 2

@@ -99,6 +99,17 @@ class CropTest {
         assertEquals(76, l.size); assertEquals(2500L, l.first())
     }
 
+    @Test fun sonyStandardStopsFormat() {
+        val f = studio.miroir.tether.camera.SettingFormat
+        val id = studio.miroir.tether.camera.SettingId
+        val s = studio.miroir.tether.camera.SonyStops
+        assertEquals("30s", f.format(id.Shutter, 0xD20D, s.shutter.first()))
+        assertEquals("1/8000", f.format(id.Shutter, 0xD20D, s.shutter.last()))
+        assertEquals("f/5.6", f.format(id.Aperture, 0x5007, 560))
+        assertEquals("+0.7 EV", f.format(id.ExposureComp, 0x5010, s.exposureComp.first { it.toInt().toShort() == 700.toShort() }))
+        assertEquals(31, s.exposureComp.size)
+    }
+
     @Test fun cyclesBackToOff() {
         var r = CropRatio.Off
         repeat(CropRatio.entries.size) { r = r.next() }

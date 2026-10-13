@@ -63,6 +63,11 @@ food and product shoots.
   → Confirmed working on 13 Oct (build 18).
 - Build 19: RAW-only vertical shots now carry the RAW's orientation (NEF/ARW TIFF tag 0x0112), so
   review shows them upright and live view turns the right way for either side.
+- Sony A7 III (13 Oct): ISO jump crawled (absolute set ignored + retried every click), shutter had
+  no list (camera sends none), aperture showed locked. Build 20: remembers absolute-set failures,
+  clicks in a burst, standard Sony stops for the list, aperture tries the dial ("Ring on A?").
+  Focus: A7 III likely can't take a focus point over USB — app verifies by read-back and says so;
+  green/red from the camera's focus indicator (0xD213).
 - Build 19: tap a value in the tether bar (shutter, aperture, ISO, EV, WB, K) for a pick list;
   Sony reaches the picked value by dial clicks.
 - Live view also pauses while a shot downloads (~3 s for a 50 MB RAW-only NEF) — looks like a freeze.

@@ -105,22 +105,39 @@ class SonyDriver(
             Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(Ptp.SONY_PROP_AF_AREA_POSITION.toLong()),
             dataOut = ByteWriter(4).u32(value).toByteArray(),
         )
-        log.log("Sony AF point → $x,$y: ${Ptp.responseName(r.code)}")
-        autofocus()
-        if (!r.ok) {
+        // Only trust the move if the camera reads the new position back (older bodies say OK and ignore it).
+        val readBack = if (r.ok) waitFor(Ptp.SONY_PROP_AF_AREA_POSITION, 600) { it == value } else null
+        log.log("Sony AF point → $x,$y: ${Ptp.responseName(r.code)}, read back ${props[Ptp.SONY_PROP_AF_AREA_POSITION]?.current?.let { "0x%08X".format(it) } ?: "none"}")
+        val locked = halfPressFocus()
+        if (locked == false) throw PtpException("Camera couldn't focus — tap an edge, the label or a texture", Ptp.RC_GENERAL_ERROR)
+        if (readBack == null) {
             return FocusOutcome(
-                false, false,
-                "The A7 III didn't accept a focus point from the tablet (${Ptp.responseName(r.code)}). " +
-                    "Move the point on the camera (Flexible Spot); AF from the tablet focuses there",
+                false, locked != null,
+                "The A7 III can't take a focus point over USB (newer Sonys can). Set Focus Area to Flexible Spot " +
+                    "and move the point on the camera; the tablet's AF then focuses there",
             )
         }
-        return FocusOutcome(true, false)
+        return FocusOutcome(true, locked != null)
     }
 
     override fun autofocus() {
+        val locked = halfPressFocus()
+        if (locked == false) throw PtpException("Camera couldn't focus — tap an edge, the label or a texture", Ptp.RC_GENERAL_ERROR)
+    }
+
+    /**
+     * Half-press until the camera reports focus (prop 0xD213 = 2) or ~1.5 s pass.
+     * Returns true = locked, false = camera said it failed, null = camera doesn't report it.
+     */
+    private fun halfPressFocus(): Boolean? {
         control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_PRESS)
-        Thread.sleep(700)
-        control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_RELEASE)
+        try {
+            val v = waitFor(Ptp.SONY_PROP_FOCUS_FOUND, 1500) { it == 2L || it == 3L }
+            log.log("Sony focus indicator: ${v ?: props[Ptp.SONY_PROP_FOCUS_FOUND]?.current ?: "not reported"}")
+            return when (v) { 2L -> true; 3L -> false; else -> null }
+        } finally {
+            control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_RELEASE)
+        }
     }
 
     private fun refreshProps(force: Boolean = false): Boolean {
@@ -184,17 +201,29 @@ class SonyDriver(
     /** Learned direction of a +1 dial click per property (cameras differ). */
     private val clickSign = HashMap<Int, Int>()
 
+    /** false once the camera has ignored an absolute set for a property: go straight to clicks. */
+    private val absoluteWorks = HashMap<Int, Boolean>()
+
+    /** Values for the pick list: the camera's own list, or Sony's standard stops when it sends none. */
+    private fun pickValues(id: SettingId, code: Int, d: PropDesc): List<Long> {
+        val own = d.allowedValues
+        val values = if (own.size > 1) own else SonyStops.forSetting(id)
+        return if (id == SettingId.WhiteBalance) values else values.sortedBy { settingKey(id, code, it) }
+    }
+
     override fun readSettings(): List<CameraSetting> {
         val kelvinMode = props[Ptp.PROP_WHITE_BALANCE]?.current == 0x8012L
         return settingCodes.mapNotNull { (id, code) ->
             if (id == SettingId.ColorTemp && !kelvinMode) return@mapNotNull null
             props[code]?.let { d ->
-                // The camera marks aperture read-only when the lens ring (not the body) sets it.
-                if (id == SettingId.Aperture && !d.writable) {
-                    CameraSetting(id, SettingFormat.format(id, code, d.current), adjustable = false, lockedBy = "Lens ring")
-                } else {
-                    toSetting(id, d, adjustable = true)
-                }
+                val values = SettingFormat.pickList(id, pickValues(id, code, d))
+                CameraSetting(
+                    id, SettingFormat.format(id, code, d.current), adjustable = id != SettingId.Mode,
+                    // Aperture read-only usually means the lens ring sets it; we still try the dial.
+                    lockedBy = if (id == SettingId.Aperture && !d.writable) "Ring on A?" else null,
+                    options = values.map { SettingOption(it, SettingFormat.format(id, code, it)) },
+                    current = d.current,
+                )
             }
         }
     }
@@ -205,7 +234,7 @@ class SonyDriver(
         val d = props[code] ?: return
         log.log("Step ${id.label} ${if (direction > 0) "+" else "-"}: now $d")
         // Exposure dials (shutter, aperture, EV) are moved by clicks, like libgphoto2 does on Sony.
-        if (id !in dialSettings) {
+        if (id !in dialSettings && absoluteWorks[code] != false) {
             val target = targetFor(id, d, direction)
             if (target != null) {
                 val r = session.transaction(
@@ -213,8 +242,9 @@ class SonyDriver(
                     dataOut = PropDescParser.encode(d.dataType, target),
                 )
                 log.log("Set ${id.label} = ${SettingFormat.format(id, code, target)}: $r")
-                if (r.ok && waitFor(code, 1200) { it == target } != null) return
-                log.log("${id.label}: absolute set ignored, trying dial clicks")
+                if (r.ok && waitFor(code, 1200) { it == target } != null) { absoluteWorks[code] = true; return }
+                absoluteWorks[code] = false
+                log.log("${id.label}: absolute set ignored, using dial clicks from now on")
             }
         }
         try {
@@ -230,33 +260,62 @@ class SonyDriver(
     }
 
     /**
-     * Jump to [value]. Absolute set where the camera takes it; otherwise click the dial until
-     * the value is reached (f/2.8 → f/5 is a handful of clicks, about a second).
+     * Jump to [value]. Absolute set where the camera takes it; otherwise one click to learn the
+     * dial's direction, a quick burst of the remaining clicks, then fine-tuning one at a time.
      */
     override fun setSetting(id: SettingId, value: Long) {
         val code = settingCodes[id] ?: return
         refreshProps(force = true)
         val d = props[code] ?: return
-        if (d.current == value) return
-        if (id !in dialSettings) {
+        val goal = settingKey(id, code, value)
+        fun now() = props[code]?.current
+        fun left(): Double = now()?.let { goal - settingKey(id, code, it) } ?: 0.0
+        if (left() == 0.0) return
+        log.log("Jump ${id.label}: ${SettingFormat.format(id, code, d.current)} → ${SettingFormat.format(id, code, value)}")
+
+        if (id !in dialSettings && absoluteWorks[code] != false) {
             val r = session.transaction(
                 Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
                 dataOut = PropDescParser.encode(d.dataType, value),
             )
-            log.log("Set ${id.label} = ${SettingFormat.format(id, code, value)}: $r")
-            if (r.ok && waitFor(code, 1200) { it == value } != null) return
+            if (r.ok && waitFor(code, 1200) { it == value } != null) { absoluteWorks[code] = true; return }
+            absoluteWorks[code] = false
+            log.log("${id.label}: absolute set ignored, using dial clicks from now on")
         }
-        val goal = settingKey(id, code, value)
-        repeat(40) {
-            val now = props[code]?.current ?: return
-            if (now == value) return
-            val diff = goal - settingKey(id, code, now)
-            if (diff == 0.0) return
-            stepSetting(id, if (diff > 0) 1 else -1)
-            val after = props[code]?.current ?: return
-            // Stop if the dial overshot past the goal (value not offered exactly).
-            val left = goal - settingKey(id, code, after)
-            if (left != 0.0 && (left > 0) != (diff > 0)) return
+
+        // How many clicks: distance between the two values in the pick list.
+        val list = pickValues(id, code, d)
+        fun index(key: Double) = list.indices.minByOrNull { kotlin.math.abs(settingKey(id, code, list[it]) - key) } ?: 0
+        val firstDir = if (left() > 0) 1 else -1
+        stepSetting(id, firstDir) // also learns which way the dial runs
+        var remaining = index(goal) - index(goal - left())
+        if (kotlin.math.abs(remaining) > 1 && (remaining > 0) == (firstDir > 0)) {
+            val sign = clickSign[code] ?: 1
+            val dir = if (remaining > 0) 1 else -1
+            repeat(kotlin.math.abs(remaining) - 1) { click(code, sign * dir); Thread.sleep(70) }
+            waitSettled(code)
+        }
+        repeat(6) {
+            val l = left()
+            if (l == 0.0) return
+            val before = now()
+            stepSetting(id, if (l > 0) 1 else -1)
+            val after = left()
+            if (now() == before || (after != 0.0 && (after > 0) != (l > 0))) return // at the end, or the goal isn't offered
+        }
+    }
+
+    /** Waits until property [code] stops changing (a burst of clicks has landed). */
+    private fun waitSettled(code: Int) {
+        var last = props[code]?.current
+        var stableSince = System.currentTimeMillis()
+        val end = stableSince + 3000
+        while (System.currentTimeMillis() < end) {
+            Thread.sleep(120)
+            if (!refreshProps(force = true)) continue
+            val v = props[code]?.current
+            if (v != last) { last = v; stableSince = System.currentTimeMillis() }
+            else if (System.currentTimeMillis() - stableSince > 400) return
         }
     }
 

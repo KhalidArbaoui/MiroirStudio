@@ -215,7 +215,7 @@ fun SettingPicker(setting: CameraSetting, onPick: (Long) -> Unit, onDismiss: () 
             }
             Spacer(Modifier.height(12.dp))
             val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
-                initialFirstVisibleItemIndex = setting.options.indexOfFirst { it.value == setting.current }.coerceAtLeast(0),
+                initialFirstVisibleItemIndex = setting.options.indexOfFirst { it.label == setting.display }.coerceAtLeast(0),
             )
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                 columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(96.dp),
@@ -226,7 +226,7 @@ fun SettingPicker(setting: CameraSetting, onPick: (Long) -> Unit, onDismiss: () 
             ) {
                 items(setting.options.size) { i ->
                     val o = setting.options[i]
-                    val on = o.value == setting.current
+                    val on = o.label == setting.display
                     val strong = o.label in fullStops || setting.id == SettingId.WhiteBalance || setting.id == SettingId.ColorTemp
                     Text(
                         o.label, textAlign = TextAlign.Center, maxLines = 1,
