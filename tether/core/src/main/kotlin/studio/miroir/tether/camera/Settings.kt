@@ -23,7 +23,12 @@ class CameraSetting(
     val adjustable: Boolean,
     /** Why it can't be changed from the tablet, e.g. "Lens ring". */
     val lockedBy: String? = null,
+    /** Values the camera offers right now, in step order, for the tap-to-pick list. */
+    val options: List<SettingOption> = emptyList(),
+    val current: Long? = null,
 )
+
+class SettingOption(val value: Long, val label: String)
 
 object SettingFormat {
     fun format(id: SettingId, code: Int, v: Long): String = when (id) {
@@ -88,6 +93,10 @@ object SettingFormat {
         val j = i + direction
         return if (j in values.indices) values[j] else null
     }
+
+    /** Values for the pick list: Kelvin thinned to 100 K steps, everything else as offered. */
+    fun pickList(id: SettingId, values: List<Long>): List<Long> =
+        if (id == SettingId.ColorTemp && values.size > 40) values.sorted().filter { it % 100 == 0L } else values
 
     /** Kelvin steps of ~100 K even when the camera offers 10 K increments. */
     fun kelvinNeighbor(desc: PropDesc, direction: Int): Long? {

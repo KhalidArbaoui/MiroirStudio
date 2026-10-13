@@ -136,6 +136,8 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     private val _settings = MutableStateFlow<List<CameraSetting>>(emptyList())
     val settings: StateFlow<List<CameraSetting>> = _settings
     private val settingRequests = ConcurrentLinkedQueue<Pair<SettingId, Int>>()
+    /** Values picked from the pop-up list: jump straight there. */
+    private val settingTargets = ConcurrentLinkedQueue<Pair<SettingId, Long>>()
     private val exported = HashSet<Long>()
 
     /** Live view the user asked for; the camera thread starts/stops it to match. */
@@ -289,6 +291,16 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                             driver.stepSetting(step.first, step.second)
                         } catch (e: PtpException) {
                             AppLog.log("Setting ${step.first.label}: ${e.message}")
+                            showToast(e.message ?: "Camera refused the change")
+                        }
+                        lastSettings = 0L
+                    }
+                    val jump = settingTargets.poll()
+                    if (jump != null) {
+                        try {
+                            driver.setSetting(jump.first, jump.second)
+                        } catch (e: PtpException) {
+                            AppLog.log("Setting ${jump.first.label}: ${e.message}")
                             showToast(e.message ?: "Camera refused the change")
                         }
                         lastSettings = 0L
@@ -529,6 +541,10 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         return studio.miroir.tether.image.Histogram.compute(px)
     }
 
+    fun setSetting(id: SettingId, value: Long) {
+        if (_status.value.state == LinkState.Connected) settingTargets.add(id to value)
+    }
+
     fun stepSetting(id: SettingId, direction: Int) {
         if (_status.value.state == LinkState.Connected) settingRequests.add(id to direction)
     }
@@ -672,6 +688,17 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                     return
                 }
                 val p = File(previewDir, "$base.jpg").apply { writeBytes(jpeg) }
+                // The preview inside a RAW has no orientation; copy the RAW's so vertical shots stand up
+                // (and live view learns which way the camera is turned).
+                if (file.isFullFile) studio.miroir.tether.image.RawOrientation.degrees(file.data)?.let { deg ->
+                    if (deg != 0) runCatching {
+                        val tag = when (deg) { 90 -> 6; 180 -> 3; else -> 8 }
+                        androidx.exifinterface.media.ExifInterface(p).apply {
+                            setAttribute(androidx.exifinterface.media.ExifInterface.TAG_ORIENTATION, tag.toString())
+                            saveAttributes()
+                        }
+                    }.onFailure { AppLog.log("Couldn't tag orientation on ${p.name}: ${it.message}") }
+                }
                 val src = if (file.isFullFile) PreviewSource.RawEmbedded else PreviewSource.CameraPreview
                 upsert(base, existing, p, src) { it.copy(rawFile = rawFile ?: it.rawFile) }
             }

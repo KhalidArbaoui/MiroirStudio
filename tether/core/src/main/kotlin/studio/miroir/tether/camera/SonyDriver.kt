@@ -229,6 +229,37 @@ class SonyDriver(
         }
     }
 
+    /**
+     * Jump to [value]. Absolute set where the camera takes it; otherwise click the dial until
+     * the value is reached (f/2.8 → f/5 is a handful of clicks, about a second).
+     */
+    override fun setSetting(id: SettingId, value: Long) {
+        val code = settingCodes[id] ?: return
+        refreshProps(force = true)
+        val d = props[code] ?: return
+        if (d.current == value) return
+        if (id !in dialSettings) {
+            val r = session.transaction(
+                Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(code.toLong()),
+                dataOut = PropDescParser.encode(d.dataType, value),
+            )
+            log.log("Set ${id.label} = ${SettingFormat.format(id, code, value)}: $r")
+            if (r.ok && waitFor(code, 1200) { it == value } != null) return
+        }
+        val goal = settingKey(id, code, value)
+        repeat(40) {
+            val now = props[code]?.current ?: return
+            if (now == value) return
+            val diff = goal - settingKey(id, code, now)
+            if (diff == 0.0) return
+            stepSetting(id, if (diff > 0) 1 else -1)
+            val after = props[code]?.current ?: return
+            // Stop if the dial overshot past the goal (value not offered exactly).
+            val left = goal - settingKey(id, code, after)
+            if (left != 0.0 && (left > 0) != (diff > 0)) return
+        }
+    }
+
     private fun stepByClick(id: SettingId, code: Int, start: Long, direction: Int) {
         val before = settingKey(id, code, start)
         val sign = clickSign[code] ?: 1

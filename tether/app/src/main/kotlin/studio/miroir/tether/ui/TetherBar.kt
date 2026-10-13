@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.heightIn
 import studio.miroir.tether.camera.CameraSetting
 import studio.miroir.tether.camera.SettingId
 
@@ -43,6 +45,8 @@ fun TetherBar(
     /** Average exposure vs mid-grey in stops, for the meter (null = no image yet). */
     meterEv: Float?,
     onStep: (SettingId, Int) -> Unit,
+    /** Tap on a value: open the list of all values to jump to one. */
+    onPick: (SettingId) -> Unit,
     onToggleLive: () -> Unit,
     onShutter: () -> Unit,
     onConnect: () -> Unit,
@@ -79,7 +83,7 @@ fun TetherBar(
             }
             settings.filter { it.id != SettingId.Mode }.forEachIndexed { i, s ->
                 if (i > 0) Box(Modifier.width(1.dp).height(40.dp).background(C.Line))
-                SettingCell(s, onStep)
+                SettingCell(s, onStep, onPick)
             }
         }
 
@@ -105,7 +109,7 @@ fun TetherBar(
 }
 
 @Composable
-private fun SettingCell(s: CameraSetting, onStep: (SettingId, Int) -> Unit) {
+private fun SettingCell(s: CameraSetting, onStep: (SettingId, Int) -> Unit, onPick: (SettingId) -> Unit) {
     Column(Modifier.padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             (s.lockedBy?.let { "${s.id.label} · $it" } ?: s.id.label).uppercase(),
@@ -121,7 +125,8 @@ private fun SettingCell(s: CameraSetting, onStep: (SettingId, Int) -> Unit) {
             Text(
                 s.display, style = T.Value.copy(color = if (s.adjustable) C.Cream else C.Muted),
                 textAlign = TextAlign.Center, maxLines = 1,
-                modifier = Modifier.widthIn(min = 64.dp),
+                modifier = Modifier.widthIn(min = 64.dp).clip(RoundedCornerShape(8.dp))
+                    .clickable(enabled = s.adjustable && s.options.size > 1) { onPick(s.id) }.padding(vertical = 6.dp),
             )
             if (s.adjustable) StepArrow(Glyph.ChevronRight) { onStep(s.id, 1) } else Spacer(Modifier.width(30.dp))
         }
@@ -184,6 +189,63 @@ private fun ExposureMeter(ev: Float?) {
                 }
                 drawPath(tri, color)
             }
+        }
+    }
+}
+
+/** Values you reach for most; shown brighter in the pick list so they're quick to find. */
+private val fullStops = setOf(
+    "f/1.4", "f/2", "f/2.8", "f/4", "f/5.6", "f/8", "f/11", "f/16", "f/22",
+    "1/15", "1/30", "1/60", "1/125", "1/250", "1/500", "1/1000", "1/2000", "1/4000", "1/8000",
+    "ISO 64", "ISO 100", "ISO 200", "ISO 400", "ISO 800", "ISO 1600", "ISO 3200", "ISO 6400",
+    "0.0 EV", "+1.0 EV", "-1.0 EV", "+2.0 EV", "-2.0 EV", "+3.0 EV", "-3.0 EV",
+)
+
+/** Pop-up list of every value the camera offers for one setting; tap one to jump there. */
+@Composable
+fun SettingPicker(setting: CameraSetting, onPick: (Long) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.widthIn(max = 620.dp).clip(RoundedCornerShape(16.dp)).background(C.Panel)
+                .border(1.dp, C.Line, RoundedCornerShape(16.dp)).padding(18.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(setting.id.label.uppercase(), style = T.Label, modifier = Modifier.weight(1f))
+                Text(setting.display, style = T.Value.copy(color = C.Accent))
+            }
+            Spacer(Modifier.height(12.dp))
+            val grid = androidx.compose.foundation.lazy.grid.rememberLazyGridState(
+                initialFirstVisibleItemIndex = setting.options.indexOfFirst { it.value == setting.current }.coerceAtLeast(0),
+            )
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Adaptive(96.dp),
+                state = grid,
+                modifier = Modifier.heightIn(max = 420.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(setting.options.size) { i ->
+                    val o = setting.options[i]
+                    val on = o.value == setting.current
+                    val strong = o.label in fullStops || setting.id == SettingId.WhiteBalance || setting.id == SettingId.ColorTemp
+                    Text(
+                        o.label, textAlign = TextAlign.Center, maxLines = 1,
+                        style = T.Value.copy(
+                            fontSize = 15.sp,
+                            color = when { on -> C.Ink; strong -> C.Cream; else -> C.Muted },
+                        ),
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                            .background(if (on) C.Accent else C.Raised)
+                            .clickable { onPick(o.value); onDismiss() }
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                "Brighter values are full stops. Sony moves shutter, aperture and EV by dial clicks, so a big jump takes a second.",
+                style = T.Small.copy(fontSize = 11.sp),
+            )
         }
     }
 }

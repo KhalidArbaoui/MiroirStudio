@@ -108,6 +108,9 @@ abstract class CameraDriver(
     /** Moves a setting one step: +1 = faster shutter / higher f-number / higher ISO / more EV / warmer K. */
     open fun stepSetting(id: SettingId, direction: Int) {}
 
+    /** Jumps a setting straight to [value] (picked from [CameraSetting.options]). */
+    open fun setSetting(id: SettingId, value: Long) {}
+
     /** Sort key so "+1" always means the same thing whatever order the camera lists values in. */
     protected fun settingKey(id: SettingId, code: Int, v: Long): Double = when (id) {
         SettingId.Shutter -> {
@@ -136,7 +139,11 @@ abstract class CameraDriver(
         else SettingFormat.neighbor(orderedValues(id, d), d.current, direction)
 
     protected fun toSetting(id: SettingId, d: PropDesc, adjustable: Boolean = d.writable) =
-        CameraSetting(id, SettingFormat.format(id, d.code, d.current), adjustable && id != SettingId.Mode)
+        CameraSetting(
+            id, SettingFormat.format(id, d.code, d.current), adjustable && id != SettingId.Mode,
+            options = SettingFormat.pickList(id, orderedValues(id, d)).map { SettingOption(it, SettingFormat.format(id, d.code, it)) },
+            current = d.current,
+        )
 
     /** Battery percentage if the camera reports it. */
     open fun batteryLevel(): Int? = runCatching {
@@ -315,8 +322,18 @@ open class GenericDriver(
     override fun stepSetting(id: SettingId, direction: Int) {
         val code = codeFor(id) ?: return
         val d = readDesc(code) ?: return
-        if (!d.writable) throw PtpException("${id.label} can't be changed now — check the camera's mode", Ptp.RC_GENERAL_ERROR)
         val target = targetFor(id, d, direction) ?: return
+        write(id, code, d, target)
+    }
+
+    override fun setSetting(id: SettingId, value: Long) {
+        val code = codeFor(id) ?: return
+        val d = readDesc(code) ?: return
+        if (d.current != value) write(id, code, d, value)
+    }
+
+    private fun write(id: SettingId, code: Int, d: PropDesc, target: Long) {
+        if (!d.writable) throw PtpException("${id.label} can't be changed now — check the camera's mode", Ptp.RC_GENERAL_ERROR)
         val r = session.retryBusy {
             session.transaction(Ptp.OP_SET_DEVICE_PROP_VALUE, longArrayOf(code.toLong()), dataOut = PropDescParser.encode(d.dataType, target))
         }

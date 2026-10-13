@@ -77,6 +77,28 @@ class CropTest {
         assertEquals(8256, studio.miroir.tether.camera.NikonLiveHeader.parse(d)!!.wholeWidth)
     }
 
+    @Test fun rawOrientationFromTiffHeader() {
+        fun tiff(little: Boolean, orientation: Int): ByteArray {
+            val b = java.nio.ByteBuffer.allocate(64).order(if (little) java.nio.ByteOrder.LITTLE_ENDIAN else java.nio.ByteOrder.BIG_ENDIAN)
+            b.put(if (little) "II".toByteArray() else "MM".toByteArray()).putShort(42).putInt(8)
+            b.putShort(2) // two entries
+            b.putShort(0x0100).putShort(4).putInt(1).putInt(8256) // ImageWidth
+            b.putShort(0x0112).putShort(3).putInt(1).putShort(orientation.toShort()).putShort(0)
+            return b.array()
+        }
+        val o = studio.miroir.tether.image.RawOrientation
+        assertEquals(90, o.degrees(tiff(true, 6)))
+        assertEquals(270, o.degrees(tiff(false, 8)))
+        assertEquals(0, o.degrees(tiff(true, 1)))
+        assertNull(o.degrees(byteArrayOf(-1, -40, 0, 0) + ByteArray(30)))
+    }
+
+    @Test fun kelvinPickListThinned() {
+        val k = (2500L..10000L step 10).toList()
+        val l = studio.miroir.tether.camera.SettingFormat.pickList(studio.miroir.tether.camera.SettingId.ColorTemp, k)
+        assertEquals(76, l.size); assertEquals(2500L, l.first())
+    }
+
     @Test fun cyclesBackToOff() {
         var r = CropRatio.Off
         repeat(CropRatio.entries.size) { r = r.next() }

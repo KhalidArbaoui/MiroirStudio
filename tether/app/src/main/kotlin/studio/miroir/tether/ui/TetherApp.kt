@@ -94,6 +94,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         var crop by rememberSaveable { mutableStateOf(CropRatio.Off) }
         var clientMode by rememberSaveable { mutableStateOf(false) }
         var showStrip by rememberSaveable { mutableStateOf(true) }
+        var picking by rememberSaveable { mutableStateOf<studio.miroir.tether.camera.SettingId?>(null) }
         var cropU by rememberSaveable { mutableFloatStateOf(0.5f) }
         var cropV by rememberSaveable { mutableFloatStateOf(0.5f) }
         val cropCenter = Offset(cropU, cropV)
@@ -235,7 +236,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                 connected = connected, settings = settings, liveSupported = liveSupported, liveOn = live,
                 receiving = transfer != null,
                 meterEv = (if (live) liveHistogram else analysis?.histogram)?.evFromMidGrey,
-                onStep = vm::stepSetting, onToggleLive = vm::toggleLiveView,
+                onStep = vm::stepSetting, onPick = { picking = it }, onToggleLive = vm::toggleLiveView,
                 onShutter = vm::capture, onConnect = onConnectRequest,
             )
         }
@@ -301,6 +302,11 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
             }
         }
 
+        picking?.let { id ->
+            settings.firstOrNull { it.id == id }?.let { s ->
+                SettingPicker(s, onPick = { v -> vm.setSetting(id, v) }, onDismiss = { picking = null })
+            }
+        }
         if (showGuide) GuideDialog { showGuide = false }
         if (showLog) LogDialog(log, vm.sessionPath) { showLog = false }
     }

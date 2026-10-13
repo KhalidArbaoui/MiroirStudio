@@ -60,6 +60,11 @@ food and product shoots.
 - Tap-to-focus (build 15/16) didn't move the point on the camera. Build 17 shows an amber box +
   the reason when the camera refuses, and logs the raw live-view header and the AF response —
   send that log to finish the fix. Z8 needs AF-S + Single-point/Wide-area (not Auto-area).
+  → Confirmed working on 13 Oct (build 18).
+- Build 19: RAW-only vertical shots now carry the RAW's orientation (NEF/ARW TIFF tag 0x0112), so
+  review shows them upright and live view turns the right way for either side.
+- Build 19: tap a value in the tether bar (shutter, aperture, ISO, EV, WB, K) for a pick list;
+  Sony reaches the picked value by dial clicks.
 - Live view also pauses while a shot downloads (~3 s for a 50 MB RAW-only NEF) — looks like a freeze.
   Build 14 shows "Receiving…" over live view; RAW + JPEG keeps the pause short.
 - Build 14+: if the app crashes, the next launch says so and the log (≡ → Share log) starts with the
