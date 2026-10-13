@@ -97,7 +97,7 @@ class SonyDriver(
         }
     }
 
-    override fun focusAt(u: Float, v: Float): FocusResult {
+    override fun focusAt(u: Float, v: Float): FocusOutcome {
         val x = (u.coerceIn(0f, 1f) * 639).toLong()
         val y = (v.coerceIn(0f, 1f) * 479).toLong()
         val value = (x shl 16) or y
@@ -107,7 +107,14 @@ class SonyDriver(
         )
         log.log("Sony AF point → $x,$y: ${Ptp.responseName(r.code)}")
         autofocus()
-        return FocusResult.Done
+        if (!r.ok) {
+            return FocusOutcome(
+                false, false,
+                "The A7 III didn't accept a focus point from the tablet (${Ptp.responseName(r.code)}). " +
+                    "Move the point on the camera (Flexible Spot); AF from the tablet focuses there",
+            )
+        }
+        return FocusOutcome(true, false)
     }
 
     override fun autofocus() {

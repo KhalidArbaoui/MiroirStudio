@@ -79,6 +79,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val liveHistogram by vm.liveHistogram.collectAsStateWithLifecycle()
         val liveSupported by vm.liveSupported.collectAsStateWithLifecycle()
         val afMark by vm.afMark.collectAsStateWithLifecycle()
+        val liveRotation by vm.liveRotation.collectAsStateWithLifecycle()
         val rotation by vm.rotation.collectAsStateWithLifecycle()
         val overlayId by vm.overlayId.collectAsStateWithLifecycle()
         val overlay by vm.overlay.collectAsStateWithLifecycle()
@@ -167,6 +168,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                     ToolRail(
                         live = live, showClipping = showClipping, tool = tool, showGrid = showGrid, bgIndex = bgIndex, crop = crop,
                         overlayOn = if (overlayId != null) overlayVisible else null,
+                        liveRotation = liveRotation, onLiveRotation = vm::cycleLiveRotation,
                         onOverlay = { vm.overlayVisible.value = !overlayVisible },
                         onClipping = { vm.showClipping.value = !showClipping },
                         onLoupe = { vm.setTool(Tool.Loupe) },
@@ -351,6 +353,8 @@ private fun ToolRail(
     /** null = no overlay chosen; otherwise whether it's showing. */
     overlayOn: Boolean?,
     onOverlay: () -> Unit,
+    liveRotation: Int,
+    onLiveRotation: () -> Unit,
     onClipping: () -> Unit,
     onLoupe: () -> Unit,
     onGreyCard: () -> Unit,
@@ -377,6 +381,13 @@ private fun ToolRail(
             IconButton(Glyph.Eyedropper, onGreyCard, active = tool == Tool.WhiteBalance)
         }
         if (live && overlayOn != null) IconButton(Glyph.Overlay, onOverlay, active = overlayOn)
+        if (live) {
+            // Camera vertical? Turn live view upright (a vertical photo also sets this).
+            Box(contentAlignment = Alignment.BottomCenter) {
+                IconButton(Glyph.Rotate, onLiveRotation, active = liveRotation != 0)
+                Text("$liveRotation°", style = T.Label.copy(fontSize = 8.sp, color = if (liveRotation != 0) C.Accent else C.Muted))
+            }
+        }
         IconButton(Glyph.Grid, onGrid, active = showGrid)
         // Tap to cycle 4:5 → 1:1 → 9:16 → 16:9 → off.
         Box(contentAlignment = Alignment.BottomCenter) {

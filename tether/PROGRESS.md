@@ -55,6 +55,11 @@ food and product shoots.
 - Sony needs dial "clicks" for shutter/aperture/EV and ISO; the app learns the direction automatically.
 - Sony reports aperture read-only when the lens ring isn't on A (log showed `0x5007 set=false`).
 - Cameras pause live view while focusing; the app now waits up to 4 s before giving up.
+- Live view always streams landscape. Build 17 turns it upright from the last photo's orientation
+  (needs RAW + JPEG or a rotated preview) or the 0°/90°/270° button on the rail; taps map back.
+- Tap-to-focus (build 15/16) didn't move the point on the camera. Build 17 shows an amber box +
+  the reason when the camera refuses, and logs the raw live-view header and the AF response —
+  send that log to finish the fix. Z8 needs AF-S + Single-point/Wide-area (not Auto-area).
 - Live view also pauses while a shot downloads (~3 s for a 50 MB RAW-only NEF) — looks like a freeze.
   Build 14 shows "Receiving…" over live view; RAW + JPEG keeps the pause short.
 - Build 14+: if the app crashes, the next launch says so and the log (≡ → Share log) starts with the

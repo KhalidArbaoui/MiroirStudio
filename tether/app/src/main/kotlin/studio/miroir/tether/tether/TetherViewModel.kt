@@ -25,7 +25,8 @@ import studio.miroir.tether.camera.CameraSetting
 import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.camera.DownloadedFile
 import studio.miroir.tether.camera.DriverOptions
-import studio.miroir.tether.camera.FocusResult
+import studio.miroir.tether.camera.FocusOutcome
+import studio.miroir.tether.camera.LiveRotation
 import studio.miroir.tether.camera.LowLevelAlarm
 import studio.miroir.tether.image.JpegExtractor
 import studio.miroir.tether.image.NeutralSample
@@ -87,7 +88,8 @@ data class Transfer(val filename: String, val done: Long, val total: Long) {
 
 enum class Tool { None, Loupe, WhiteBalance }
 
-enum class AfState { Busy, Locked, Done, Failed }
+/** [Elsewhere]: the camera focused, but at its own point — it didn't accept the tapped one. */
+enum class AfState { Busy, Locked, Done, Elsewhere, Failed }
 
 /** Where the user last asked the camera to focus, in live-view fractions, and how it went. */
 data class AfMark(val u: Float, val v: Float, val state: AfState)
@@ -148,6 +150,13 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     private val focusRequests = ConcurrentLinkedQueue<FloatArray>()
     private val _afMark = MutableStateFlow<AfMark?>(null)
     val afMark: StateFlow<AfMark?> = _afMark
+
+    /**
+     * Degrees (clockwise) to turn live view for display. The sensor always streams landscape; this
+     * follows the camera's orientation from the last photo, or the rail button.
+     */
+    val liveRotation = MutableStateFlow(0)
+    @Volatile private var focusNoteShown: String? = null
 
     val rotation = MutableStateFlow(
         runCatching { RotationLock.valueOf(prefs.getString("rotation", null) ?: "Auto") }.getOrDefault(RotationLock.Auto),
@@ -290,8 +299,15 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                         while (true) focus = focusRequests.poll() ?: break
                         val req = focus!!
                         try {
-                            val result = if (req.size == 2) driver.focusAt(req[0], req[1]) else { driver.autofocus(); FocusResult.Done }
-                            _afMark.update { it?.copy(state = if (result == FocusResult.Locked) AfState.Locked else AfState.Done) }
+                            val outcome = if (req.size == 2) driver.focusAt(req[0], req[1]) else { driver.autofocus(); FocusOutcome(true, false) }
+                            val state = when {
+                                !outcome.moved -> AfState.Elsewhere
+                                outcome.confirmed -> AfState.Locked
+                                else -> AfState.Done
+                            }
+                            _afMark.update { it?.copy(state = state) }
+                            // Explain once why the point didn't move; after that the amber box says it.
+                            outcome.note?.let { if (it != focusNoteShown) { focusNoteShown = it; showToast(it) } }
                         } catch (e: PtpException) {
                             _afMark.update { it?.copy(state = AfState.Failed) }
                             showToast(e.message ?: "Couldn't focus — tap an edge, the label or a texture")
@@ -321,7 +337,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                         try {
                             driver.liveViewFrame()?.let { jpeg ->
                                 android.graphics.BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)?.let { bmp ->
-                                    _liveFrame.value = bmp
+                                    _liveFrame.value = turn(bmp, liveRotation.value)
                                     val now = System.currentTimeMillis()
                                     if (now - lastHistogram > 400) {
                                         lastHistogram = now
@@ -472,7 +488,9 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     fun focusAt(u: Float, v: Float) {
         if (_status.value.state != LinkState.Connected) return
         _afMark.value = AfMark(u, v, AfState.Busy)
-        focusRequests.add(floatArrayOf(u, v))
+        // The mark is where you tapped on screen; the camera wants sensor (landscape) coordinates.
+        val (su, sv) = LiveRotation.toSensor(u, v, liveRotation.value)
+        focusRequests.add(floatArrayOf(su, sv))
     }
 
     fun cycleRotation() {
@@ -480,6 +498,24 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         rotation.value = next
         prefs.edit().putString("rotation", next.name).apply()
         showToast(next.toast, error = false)
+    }
+
+    private fun turn(bmp: Bitmap, degrees: Int): Bitmap {
+        if (degrees == 0) return bmp
+        val m = android.graphics.Matrix().apply { postRotate(degrees.toFloat()) }
+        return Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
+    }
+
+    /** Rail button: turn live view when the camera is vertical (before the first vertical photo sets it). */
+    fun cycleLiveRotation() {
+        setLiveRotation(when (liveRotation.value) { 0 -> 90; 90 -> 270; else -> 0 })
+    }
+
+    private fun setLiveRotation(deg: Int) {
+        if (deg == liveRotation.value) return
+        liveRotation.value = deg
+        _afMark.value = null
+        AppLog.log("Live view turned $deg°")
     }
 
     private fun liveHistogram(bmp: Bitmap): studio.miroir.tether.image.Histogram {
@@ -654,6 +690,11 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     private fun upsert(base: String, existing: Shot?, preview: File, source: PreviewSource, extra: (Shot) -> Shot) {
         val exif = ImageProcessor.readExif(preview)
         val thumb = ImageProcessor.thumbnail(preview, exif.rotation)
+        // A vertical photo means the camera is vertical: turn live view to match. RAW-embedded
+        // previews often lack the orientation tag, so only trust them when they say "rotated".
+        if (existing == null && exif.rotation in setOf(0, 90, 180, 270) && (source == PreviewSource.Jpeg || exif.rotation != 0)) {
+            setLiveRotation(exif.rotation)
+        }
         if (existing == null) {
             val shot = extra(Shot(nextId++, base, preview, source, thumb = thumb, exif = exif))
             _shots.update { it + shot }

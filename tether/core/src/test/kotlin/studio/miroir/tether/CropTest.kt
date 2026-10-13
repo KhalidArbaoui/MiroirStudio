@@ -57,6 +57,23 @@ class CropTest {
         assertNull(a.check(100)); assertEquals(10, a.check(5)) // swapped battery, then a flat one
     }
 
+    @Test fun tapOnRotatedLiveViewMapsToSensor() {
+        val r = studio.miroir.tether.camera.LiveRotation
+        // Frame turned 90° clockwise for display: the screen's top-left is the sensor's bottom-left.
+        assertEquals(0f to 1f, r.toSensor(0f, 0f, 90))
+        assertEquals(1f to 0f, r.toSensor(0f, 0f, 270))
+        assertEquals(0.25f to 0.4f, r.toSensor(0.6f, 0.25f, 90))
+        assertEquals(0.75f to 0.6f, r.toSensor(0.6f, 0.25f, 270))
+        assertEquals(0.3f to 0.7f, r.toSensor(0.3f, 0.7f, 0))
+    }
+
+    @Test fun nikonHeaderLittleEndianFallback() {
+        val d = ByteArray(64)
+        fun put(i: Int, v: Int) { d[i] = v.toByte(); d[i + 1] = (v shr 8).toByte() }
+        put(0, 1024); put(2, 683); put(4, 8256); put(6, 5504)
+        assertEquals(8256, studio.miroir.tether.camera.NikonLiveHeader.parse(d)!!.wholeWidth)
+    }
+
     @Test fun cyclesBackToOff() {
         var r = CropRatio.Off
         repeat(CropRatio.entries.size) { r = r.next() }

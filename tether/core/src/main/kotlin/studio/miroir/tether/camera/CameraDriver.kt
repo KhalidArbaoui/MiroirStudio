@@ -19,8 +19,25 @@ class DownloadedFile(
     val isFullFile: Boolean,
 )
 
-/** [Locked]: the camera confirmed focus. [Done]: AF ran but the camera doesn't report the result. */
-enum class FocusResult { Locked, Done }
+/**
+ * Result of a tap-to-focus: [moved] = the camera accepted the new AF point, [confirmed] = it
+ * reported focus success; [note] explains to the photographer when the point couldn't move.
+ */
+data class FocusOutcome(val moved: Boolean, val confirmed: Boolean, val note: String? = null)
+
+/**
+ * Live view comes off the sensor in landscape whatever way the camera is held. When the camera
+ * is vertical we turn the frame for display, so a tap has to be turned back to sensor coordinates.
+ */
+object LiveRotation {
+    /** (u, v) on the displayed frame, rotated [degrees] clockwise, → (u, v) on the sensor frame. */
+    fun toSensor(u: Float, v: Float, degrees: Int): Pair<Float, Float> = when (degrees) {
+        90 -> v to 1 - u
+        180 -> 1 - u to 1 - v
+        270 -> 1 - v to u
+        else -> u to v
+    }
+}
 
 interface CameraListener {
     fun onFile(file: DownloadedFile)
@@ -77,10 +94,13 @@ abstract class CameraDriver(
      * Move the AF point to (u, v) — fractions of the live-view image — and focus there.
      * Cameras that can't move the point remotely just focus at their own point.
      */
-    open fun focusAt(u: Float, v: Float): FocusResult {
+    open fun focusAt(u: Float, v: Float): FocusOutcome {
         autofocus()
-        return FocusResult.Done
+        return FocusOutcome(moved = false, confirmed = false, note = "This camera can't take a focus point from the tablet — it focused at its own point")
     }
+
+    /** Pixel size of the last photo, a fallback coordinate space for the AF point. */
+    @Volatile protected var lastImageSize: Pair<Int, Int>? = null
 
     /** Current exposure settings, for the tablet's camera panel. */
     open fun readSettings(): List<CameraSetting> = emptyList()
@@ -209,6 +229,7 @@ open class GenericDriver(
                 continue
             }
             log.log("New object: $info")
+            if (info.imageWidth > 0 && info.imageHeight > 0) lastImageSize = info.imageWidth.toInt() to info.imageHeight.toInt()
             if (!info.isFolder) added += handle to info
         }
         // JPEGs first so the picture appears before a large RAW transfer.

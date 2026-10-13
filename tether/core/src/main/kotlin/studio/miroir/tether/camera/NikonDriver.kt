@@ -77,6 +77,8 @@ class NikonDriver(
     /** Live-view coordinate space for ChangeAfArea, read from the frame header. */
     private var liveHeader: NikonLiveHeader? = null
     private var headerLogged = false
+    /** After moving the AF point, log where the camera says it is, to check the coordinates. */
+    @Volatile private var logAfCentre = false
 
     override fun liveViewFrame(): ByteArray? {
         val r = session.transaction(Ptp.OP_NIKON_GET_LIVE_VIEW_IMG, timeoutMs = 3000)
@@ -86,7 +88,12 @@ class NikonDriver(
                 NikonLiveHeader.parse(r.data)?.let { liveHeader = it }
                 if (!headerLogged) {
                     headerLogged = true
-                    log.log("Nikon live view header: ${liveHeader ?: "not recognised"} (${r.data.size} bytes)")
+                    val raw = r.data.take(32).joinToString(" ") { "%02X".format(it) }
+                    log.log("Nikon live view header: ${liveHeader ?: "not recognised"} (${r.data.size} bytes) [$raw]")
+                }
+                if (logAfCentre) {
+                    logAfCentre = false
+                    liveHeader?.let { log.log("Nikon AF area now centred at ${it.afCenterX},${it.afCenterY}") }
                 }
                 JpegExtractor.firstJpeg(r.data)
             }
@@ -113,18 +120,29 @@ class NikonDriver(
         waitReady()
     }
 
-    override fun focusAt(u: Float, v: Float): FocusResult {
-        val h = liveHeader
-        if (h != null) {
-            val x = (u.coerceIn(0f, 1f) * h.wholeWidth).toLong()
-            val y = (v.coerceIn(0f, 1f) * h.wholeHeight).toLong()
-            val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_CHANGE_AF_AREA, longArrayOf(x, y)) }
-            log.log("Nikon AF point → $x,$y of ${h.wholeWidth}x${h.wholeHeight}: ${Ptp.responseName(r.code)}")
-        } else {
-            log.log("Nikon AF point not moved: no live-view header yet")
+    override fun focusAt(u: Float, v: Float): FocusOutcome {
+        val space = liveHeader?.let { it.wholeWidth to it.wholeHeight } ?: lastImageSize
+        if (space == null) {
+            log.log("Nikon AF point not moved: no coordinate space yet (no live-view header, no photo)")
+            autofocus()
+            return FocusOutcome(false, true, "Take one photo first, then tap to focus — the app needs the camera's frame size")
         }
+        val x = (u.coerceIn(0f, 1f) * space.first).toLong()
+        val y = (v.coerceIn(0f, 1f) * space.second).toLong()
+        val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_CHANGE_AF_AREA, longArrayOf(x, y)) }
+        log.log("Nikon AF point → $x,$y of ${space.first}x${space.second}${if (liveHeader == null) " (from photo size)" else ""}: ${Ptp.responseName(r.code)}")
+        if (!r.ok) {
+            autofocus()
+            return FocusOutcome(
+                false, true,
+                "The Z8 didn't move its focus point (${Ptp.responseName(r.code)}). On the camera set Focus mode AF-S " +
+                    "and AF-area mode Single-point or Wide-area — not Auto-area",
+            )
+        }
+        waitReady()
+        logAfCentre = true
         autofocus()
-        return FocusResult.Locked
+        return FocusOutcome(true, true)
     }
 
     override fun pollVendorEvents(): List<PtpEvent> {
@@ -171,13 +189,18 @@ data class NikonLiveHeader(
     val afCenterX: Int, val afCenterY: Int,
 ) {
     companion object {
+        /** Nikon documents this header as big-endian; accept little-endian too in case a body differs. */
         fun parse(d: ByteArray): NikonLiveHeader? {
             if (d.size < 24 || (d[0].toInt() == -1 && d[1].toInt() == -40)) return null // starts with JPEG: no header
             fun be(i: Int) = ((d[i].toInt() and 0xFF) shl 8) or (d[i + 1].toInt() and 0xFF)
-            val h = NikonLiveHeader(be(0), be(2), be(4), be(6), be(20), be(22))
-            val sane = h.jpegWidth in 160..4000 && h.jpegHeight in 120..4000 &&
-                h.wholeWidth in h.jpegWidth..20000 && h.wholeHeight in h.jpegHeight..20000
-            return h.takeIf { sane }
+            fun le(i: Int) = (d[i].toInt() and 0xFF) or ((d[i + 1].toInt() and 0xFF) shl 8)
+            for (read in listOf(::be, ::le)) {
+                val h = NikonLiveHeader(read(0), read(2), read(4), read(6), read(20), read(22))
+                val sane = h.jpegWidth in 160..4000 && h.jpegHeight in 120..4000 &&
+                    h.wholeWidth in h.jpegWidth..20000 && h.wholeHeight in h.jpegHeight..20000
+                if (sane) return h
+            }
+            return null
         }
     }
 }

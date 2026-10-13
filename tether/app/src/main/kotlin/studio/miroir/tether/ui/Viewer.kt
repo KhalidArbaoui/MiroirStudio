@@ -309,6 +309,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawAfMark(r: Rect,
         AfState.Busy -> Color.White
         AfState.Locked -> C.Ok
         AfState.Done -> C.Cream
+        AfState.Elsewhere -> C.Warn
         AfState.Failed -> C.Bad
     }
     val c = Offset(r.left + m.u * r.width, r.top + m.v * r.height)
