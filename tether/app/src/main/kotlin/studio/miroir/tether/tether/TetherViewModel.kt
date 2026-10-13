@@ -346,7 +346,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
             while (running.get() && !Thread.currentThread().isInterrupted) {
                 val n = transport.readEvent(buf, 500)
                 if (n > 0) PtpEvent.parse(buf, n)?.let {
-                    AppLog.log("USB $it")
+                    if (it.code != studio.miroir.tether.ptp.Ptp.EV_DEVICE_PROP_CHANGED) AppLog.log("USB $it")
                     driver.onInterruptEvent(it)
                 }
             }

@@ -42,6 +42,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (AppLog.init(filesDir)) {
+            android.widget.Toast.makeText(
+                this, "MIROIR Tether closed unexpectedly last time. Details are in the log (≡) — tap Share log.",
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         // Let Android colour-manage Adobe RGB / P3 images on wide-gamut Samsung panels.
         if (resources.configuration.isScreenWideColorGamut) {

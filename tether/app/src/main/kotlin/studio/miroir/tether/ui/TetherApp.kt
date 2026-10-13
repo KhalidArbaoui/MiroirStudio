@@ -125,6 +125,13 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                         modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp),
                     )
                 }
+                // The camera sends one thing at a time, so live view pauses while a shot downloads.
+                if (live) transfer?.let { t ->
+                    Pill(
+                        "Receiving ${t.filename} · ${(t.fraction * 100).toInt()}% — live view resumes after",
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp), color = C.Gold,
+                    )
+                }
                 if (!live && shots.isNotEmpty()) {
                     val index = shots.indexOfFirst { it.id == selectedId }
                     FrameCounter(

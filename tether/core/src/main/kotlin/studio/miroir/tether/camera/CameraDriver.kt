@@ -170,6 +170,8 @@ open class GenericDriver(
             val handle = when (e.code) {
                 Ptp.EV_OBJECT_ADDED -> e.param(0).takeIf { seen.add(it) }
                 Ptp.EV_NIKON_OBJECT_ADDED_IN_SDRAM -> e.param(0).takeIf { it != 0L } ?: Ptp.NIKON_SDRAM_HANDLE
+                // Property changes arrive every second or so and would bury useful lines.
+                Ptp.EV_DEVICE_PROP_CHANGED -> null
                 else -> { log.log("Ignored $e"); null }
             } ?: continue
             val info = try {

@@ -48,6 +48,10 @@ food and product shoots.
 - Sony needs dial "clicks" for shutter/aperture/EV and ISO; the app learns the direction automatically.
 - Sony reports aperture read-only when the lens ring isn't on A (log showed `0x5007 set=false`).
 - Cameras pause live view while focusing; the app now waits up to 4 s before giving up.
+- Live view also pauses while a shot downloads (~3 s for a 50 MB RAW-only NEF) — looks like a freeze.
+  Build 14 shows "Receiving…" over live view; RAW + JPEG keeps the pause short.
+- Build 14+: if the app crashes, the next launch says so and the log (≡ → Share log) starts with the
+  crash details and the end of the crashed session.
 
 ## Next steps (pick one tomorrow)
 
