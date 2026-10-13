@@ -28,6 +28,23 @@ class CropTest {
         assertArrayEquals(floatArrayOf(0f, 1000f / 6000, 1f, 5000f / 6000), f, eps)
     }
 
+    @Test fun movedFrameStaysInsideImage() {
+        // 4:5 on 3:2 is 0.533 wide; asking for the right edge pins it there.
+        val f = CropRatio.Portrait45.frame(6000f, 4000f, cu = 0.95f, cv = 0.1f)!!
+        assertArrayEquals(floatArrayOf(1 - 3200f / 6000, 0f, 1f, 1f), f, eps)
+        val g = CropRatio.Portrait45.frame(6000f, 4000f, cu = 0.4f)!!
+        assertEquals(0.4f, (g[0] + g[2]) / 2, eps)
+    }
+
+    @Test fun nikonLiveHeader() {
+        val d = ByteArray(64)
+        fun put(i: Int, v: Int) { d[i] = (v shr 8).toByte(); d[i + 1] = v.toByte() }
+        put(0, 1024); put(2, 683); put(4, 8256); put(6, 5504); put(20, 4128); put(22, 2752)
+        val h = studio.miroir.tether.camera.NikonLiveHeader.parse(d)!!
+        assertEquals(8256, h.wholeWidth); assertEquals(5504, h.wholeHeight); assertEquals(4128, h.afCenterX)
+        assertNull(studio.miroir.tether.camera.NikonLiveHeader.parse(byteArrayOf(-1, -40) + ByteArray(40)))
+    }
+
     @Test fun cyclesBackToOff() {
         var r = CropRatio.Off
         repeat(CropRatio.entries.size) { r = r.next() }

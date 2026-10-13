@@ -173,19 +173,19 @@ fun RatingControls(rating: Int, pick: Boolean, onRate: (Int) -> Unit, onPick: ()
     Row(verticalAlignment = Alignment.CenterVertically) {
         for (i in 1..5) {
             Box(Modifier.size(34.dp).clip(CircleShape).clickable { onRate(i) }, contentAlignment = Alignment.Center) {
-                Icon(if (i <= rating) Glyph.StarFilled else Glyph.Star, if (i <= rating) C.Gold else C.Faint, size = 22.dp)
+                Icon(if (i <= rating) Glyph.StarFilled else Glyph.Star, if (i <= rating) C.Accent else C.Faint, size = 22.dp)
             }
         }
         Spacer(Modifier.weight(1f))
         Row(
-            Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.GoldDim else C.Raised)
-                .border(1.dp, if (pick) C.Gold else C.Line, RoundedCornerShape(50))
+            Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.AccentDim else C.Raised)
+                .border(1.dp, if (pick) C.Accent else C.Line, RoundedCornerShape(50))
                 .clickable(onClick = onPick).padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(if (pick) Glyph.HeartFilled else Glyph.Heart, if (pick) C.Gold else C.Cream, size = 16.dp)
+            Icon(if (pick) Glyph.HeartFilled else Glyph.Heart, if (pick) C.Accent else C.Cream, size = 16.dp)
             Spacer(Modifier.width(6.dp))
-            Text("Pick", style = T.Body.copy(color = if (pick) C.Gold else C.Cream, fontSize = 13.sp))
+            Text("Pick", style = T.Body.copy(color = if (pick) C.Accent else C.Cream, fontSize = 13.sp))
         }
     }
 }
@@ -206,7 +206,7 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
             Box(
                 Modifier.width(126.dp).height(84.dp).clip(RoundedCornerShape(6.dp))
                     .background(C.Raised)
-                    .border(if (selected) 2.dp else 1.dp, if (selected) C.Gold else C.Line, RoundedCornerShape(6.dp))
+                    .border(if (selected) 2.dp else 1.dp, if (selected) C.Accent else C.Line, RoundedCornerShape(6.dp))
                     .clickable { onSelect(shot.id) },
             ) {
                 shot.thumb?.let {
@@ -218,13 +218,13 @@ fun Filmstrip(shots: List<Shot>, selectedId: Long?, onSelect: (Long) -> Unit, mo
                         .padding(horizontal = 5.dp, vertical = 3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    for (i in 1..shot.rating) Icon(Glyph.StarFilled, C.Gold, size = 10.dp)
+                    for (i in 1..shot.rating) Icon(Glyph.StarFilled, C.Accent, size = 10.dp)
                     Spacer(Modifier.weight(1f))
                     if (shot.source != PreviewSource.Jpeg) Box(Modifier.size(6.dp).background(C.Warn, CircleShape))
                     if (shot.rawFile != null) Text(" RAW", style = T.Label.copy(fontSize = 8.sp, color = C.Cream))
                     if (shot.pick) {
                         Spacer(Modifier.width(4.dp))
-                        Icon(Glyph.HeartFilled, C.Gold, size = 11.dp)
+                        Icon(Glyph.HeartFilled, C.Accent, size = 11.dp)
                     }
                 }
             }
@@ -294,7 +294,7 @@ fun TransferBar(t: Transfer?) {
             style = T.Small, maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
         LinearProgressIndicator(
-            progress = { t.fraction }, color = C.Gold, trackColor = C.Line,
+            progress = { t.fraction }, color = C.Accent, trackColor = C.Line,
             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
     }
@@ -310,7 +310,7 @@ fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit, hint
         Switch(
             checked = checked, onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = C.Ink, checkedTrackColor = C.Gold,
+                checkedThumbColor = C.Ink, checkedTrackColor = C.Accent,
                 uncheckedThumbColor = C.Muted, uncheckedTrackColor = C.Raised, uncheckedBorderColor = C.Line,
             ),
         )
@@ -336,7 +336,7 @@ fun FilterBar(
             val on = f == filter
             Text(
                 "${f.label}  $n", style = T.Small.copy(color = if (on) C.Ink else C.Cream),
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) C.Gold else C.Raised)
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) C.Accent else C.Raised)
                     .clickable { onFilter(f) }.padding(horizontal = 12.dp, vertical = 5.dp),
             )
         }
@@ -350,12 +350,12 @@ fun FilterBar(
 private fun ActionChip(glyph: Glyph, label: String, onClick: () -> Unit, accent: Boolean = false) {
     Row(
         Modifier.clip(RoundedCornerShape(50))
-            .then(if (accent) Modifier.border(1.dp, C.Gold, RoundedCornerShape(50)) else Modifier)
+            .then(if (accent) Modifier.border(1.dp, C.Accent, RoundedCornerShape(50)) else Modifier)
             .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(glyph, if (accent) C.Gold else C.Cream, size = 14.dp)
+        Icon(glyph, if (accent) C.Accent else C.Cream, size = 14.dp)
         Spacer(Modifier.width(6.dp))
-        Text(label, style = T.Small.copy(color = if (accent) C.Gold else C.Cream))
+        Text(label, style = T.Small.copy(color = if (accent) C.Accent else C.Cream))
     }
 }

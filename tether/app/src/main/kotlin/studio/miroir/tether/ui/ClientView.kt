@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +46,7 @@ fun ClientView(
     live: Boolean,
     liveFrame: android.graphics.Bitmap?,
     crop: CropRatio,
+    cropCenter: androidx.compose.ui.geometry.Offset,
     onPick: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
@@ -54,16 +57,22 @@ fun ClientView(
     val bg = Color(0xFF0B0B0B)
     Box(Modifier.fillMaxSize().background(bg)) {
         when {
-            live -> LiveViewPane(liveFrame, bg, showGrid = false, modifier = Modifier.fillMaxSize(), crop = crop)
+            live -> LiveViewPane(liveFrame, bg, showGrid = false, modifier = Modifier.fillMaxSize(), crop = crop, cropCenter = cropCenter)
             analysis != null -> Viewer(
                 analysis, bg, showClipping = false, showGrid = false, tool = Tool.None, loupe = null, neutral = null,
-                onTap = { _, _ -> }, modifier = Modifier.fillMaxSize(), crop = crop,
+                onTap = { _, _ -> }, modifier = Modifier.fillMaxSize(), crop = crop, cropCenter = cropCenter,
             )
             else -> Text(
                 "Waiting for the first photo…", color = C.Muted, fontSize = 18.sp,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
+
+        androidx.compose.foundation.Image(
+            androidx.compose.ui.res.painterResource(studio.miroir.tether.R.drawable.miroir_logo), contentDescription = "MIROIR Studio",
+            modifier = Modifier.align(Alignment.BottomStart).padding(start = 22.dp, bottom = 26.dp)
+                .height(30.dp).alpha(0.75f),
+        )
 
         IconButton(
             Glyph.Close, onExit, tint = C.Muted,
@@ -87,14 +96,14 @@ fun ClientView(
 @Composable
 private fun ClientPick(pick: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.Gold else Color(0xCC000000))
-            .border(1.dp, C.Gold, RoundedCornerShape(50))
+        Modifier.clip(RoundedCornerShape(50)).background(if (pick) C.Accent else Color(0xCC000000))
+            .border(1.dp, C.Accent, RoundedCornerShape(50))
             .clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(if (pick) Glyph.HeartFilled else Glyph.Heart, if (pick) C.Ink else C.Gold, size = 18.dp)
+        Icon(if (pick) Glyph.HeartFilled else Glyph.Heart, if (pick) C.Ink else C.Accent, size = 18.dp)
         Spacer(Modifier.width(8.dp))
-        Text(if (pick) "Approved" else "Approve", style = T.Body.copy(color = if (pick) C.Ink else C.Gold, fontSize = 15.sp))
+        Text(if (pick) "Approved" else "Approve", style = T.Body.copy(color = if (pick) C.Ink else C.Accent, fontSize = 15.sp))
     }
 }
 

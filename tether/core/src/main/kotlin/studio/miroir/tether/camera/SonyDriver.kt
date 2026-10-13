@@ -97,6 +97,19 @@ class SonyDriver(
         }
     }
 
+    override fun focusAt(u: Float, v: Float): FocusResult {
+        val x = (u.coerceIn(0f, 1f) * 639).toLong()
+        val y = (v.coerceIn(0f, 1f) * 479).toLong()
+        val value = (x shl 16) or y
+        val r = session.transaction(
+            Ptp.OP_SONY_SET_CONTROL_DEVICE_A, longArrayOf(Ptp.SONY_PROP_AF_AREA_POSITION.toLong()),
+            dataOut = ByteWriter(4).u32(value).toByteArray(),
+        )
+        log.log("Sony AF point → $x,$y: ${Ptp.responseName(r.code)}")
+        autofocus()
+        return FocusResult.Done
+    }
+
     override fun autofocus() {
         control(Ptp.SONY_CTRL_S1_HALF_PRESS, Ptp.SONY_PRESS)
         Thread.sleep(700)

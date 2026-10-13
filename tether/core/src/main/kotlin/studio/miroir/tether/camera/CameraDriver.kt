@@ -19,6 +19,9 @@ class DownloadedFile(
     val isFullFile: Boolean,
 )
 
+/** [Locked]: the camera confirmed focus. [Done]: AF ran but the camera doesn't report the result. */
+enum class FocusResult { Locked, Done }
+
 interface CameraListener {
     fun onFile(file: DownloadedFile)
     fun onProgress(filename: String, done: Long, total: Long)
@@ -69,6 +72,15 @@ abstract class CameraDriver(
 
     /** Run autofocus once (at the camera's current AF point). */
     open fun autofocus() {}
+
+    /**
+     * Move the AF point to (u, v) — fractions of the live-view image — and focus there.
+     * Cameras that can't move the point remotely just focus at their own point.
+     */
+    open fun focusAt(u: Float, v: Float): FocusResult {
+        autofocus()
+        return FocusResult.Done
+    }
 
     /** Current exposure settings, for the tablet's camera panel. */
     open fun readSettings(): List<CameraSetting> = emptyList()

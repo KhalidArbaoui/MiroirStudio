@@ -11,18 +11,17 @@ enum class CropRatio(val label: String, val w: Int, val h: Int, val use: String)
     fun next(): CropRatio = entries[(ordinal + 1) % entries.size]
 
     /**
-     * Largest centred crop of this ratio inside a [width] × [height] image, as fractions
-     * (left, top, right, bottom) of the image, or null when off.
+     * Largest crop of this ratio inside a [width] × [height] image, centred as close to
+     * ([cu], [cv]) as fits, as fractions (left, top, right, bottom) of the image; null when off.
      */
-    fun frame(width: Float, height: Float): FloatArray? {
+    fun frame(width: Float, height: Float, cu: Float = 0.5f, cv: Float = 0.5f): FloatArray? {
         if (this == Off || width <= 0f || height <= 0f) return null
         val target = w.toFloat() / h
-        return if (width / height > target) {
-            val f = height * target / width
-            floatArrayOf((1 - f) / 2, 0f, (1 + f) / 2, 1f)
-        } else {
-            val f = width / target / height
-            floatArrayOf(0f, (1 - f) / 2, 1f, (1 + f) / 2)
-        }
+        var fw = 1f
+        var fh = 1f
+        if (width / height > target) fw = height * target / width else fh = width / target / height
+        val u = cu.coerceIn(fw / 2, 1 - fw / 2)
+        val v = cv.coerceIn(fh / 2, 1 - fh / 2)
+        return floatArrayOf(u - fw / 2, v - fh / 2, u + fw / 2, v + fh / 2)
     }
 }

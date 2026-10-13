@@ -33,6 +33,7 @@ object Ptp {
     const val OP_NIKON_CHECK_EVENT = 0x90C7
     const val OP_NIKON_DEVICE_READY = 0x90C8
     const val OP_NIKON_CAPTURE_REC_IN_MEDIA = 0x9207
+    const val OP_NIKON_CHANGE_AF_AREA = 0x9205
 
     // Sony vendor operations
     const val OP_SONY_SDIO_CONNECT = 0x9201
@@ -87,6 +88,8 @@ object Ptp {
     const val SONY_PRIORITY_PC_REMOTE = 0x0010L
     const val SONY_PROP_OBJECT_IN_MEMORY = 0xD215
     const val SONY_PROP_BATTERY = 0xD218
+    /** AF point as (x shl 16) or y on a 640×480 grid. */
+    const val SONY_PROP_AF_AREA_POSITION = 0xD2DC
     const val SONY_CTRL_S1_HALF_PRESS = 0xD2C1
     const val SONY_CTRL_S2_RELEASE = 0xD2C2
     const val SONY_PRESS = 2

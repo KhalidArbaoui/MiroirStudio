@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MIROIR Studio logo (light, for dark backgrounds), from the brand board SVG. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="94.6dp" android:height="34dp"
+    android:viewportWidth="1218.59" android:viewportHeight="438">
+    <group android:translateX="-4.33" android:translateY="248.3" android:scaleX="1.03" android:scaleY="1.05">
+        <group android:translateX="0" android:translateY="0" android:scaleX="0.42153" android:scaleY="-0.42153">
+            <group android:translateX="0" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M615 492C600 535 592 550 546 551L538 551L399 95L239 495C223 537 203 551 156 551L88 551L132 462L10 -1L20 0L140 445L296 56C313 14 333 0 379 0L440 0L405 82L516 444L644 60C659 16 668 0 714 0L780 0Z" />
+            </group>
+            <group android:translateX="790" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M161 482C161 544 114 551 73 551L51 551L51 69C51 8 98 0 139 0L161 0Z" />
+            </group>
+        </group>
+        <group android:translateX="422.37" android:translateY="0" android:scaleX="0.42153" android:scaleY="-0.42153">
+            <group android:translateX="0" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M161 216L223 216C259 216 265 209 287 172L357 51C375 21 401 0 447 0L510 0L413 175C395 207 377 221 348 223C443 244 494 309 494 376C494 462 404 551 222 551L51 551L51 69C51 8 98 0 139 0L161 0ZM161 541L223 541C320 541 374 465 374 376C374 299 333 226 260 226L161 226Z" />
+            </group>
+        </group>
+        <group android:translateX="637.35" android:translateY="0" android:scaleX="0.42153" android:scaleY="-0.42153">
+            <group android:translateX="0" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M295 -10C660 -10 661 561 295 561C-72 561 -71 -10 295 -10ZM295 0C89 0 88 551 295 551C501 551 500 0 295 0Z" />
+            </group>
+            <group android:translateX="589" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M161 482C161 544 114 551 73 551L51 551L51 69C51 8 98 0 139 0L161 0Z" />
+            </group>
+            <group android:translateX="801" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M161 216L223 216C259 216 265 209 287 172L357 51C375 21 401 0 447 0L510 0L413 175C395 207 377 221 348 223C443 244 494 309 494 376C494 462 404 551 222 551L51 551L51 69C51 8 98 0 139 0L161 0ZM161 541L223 541C320 541 374 465 374 376C374 299 333 226 260 226L161 226Z" />
+            </group>
+        </group>
+    </group>
+    <group android:translateX="165.35" android:translateY="418.09" android:scaleX="0.95" android:scaleY="0.87">
+        <group android:translateX="0" android:translateY="0" android:scaleX="0.094619" android:scaleY="-0.094619">
+            <group android:translateX="0" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M212 311Q232 223 266 172Q300 121 354 96.5Q408 72 493 72Q610 72 672.5 133Q735 194 735 311Q735 386 709 437Q683 488 624 533Q565 578 444 638Q327 696 259 751.5Q191 807 157.5 872Q124 937 124 1014Q124 1126 176.5 1208.5Q229 1291 330.5 1336Q432 1381 563 1381Q639 1381 711.5 1373Q784 1365 893 1337L893 1067L794 1067Q771 1155 736 1204Q701 1253 654 1272.5Q607 1292 532 1292Q467 1292 415.5 1268Q364 1244 334 1195.5Q304 1147 304 1080Q304 1009 329.5 960Q355 911 409 869Q463 827 569 775Q697 711 767.5 656Q838 601 877.5 530.5Q917 460 917 366Q917 261 884 188.5Q851 116 792.5 70.5Q734 25 652.5 4.5Q571 -16 474 -16Q317 -16 112 37L112 311Z" />
+            </group>
+        </group>
+        <group android:translateX="151.9" android:translateY="0" android:scaleX="0.094619" android:scaleY="-0.094619">
+            <group android:translateX="0" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M66 1365L1148 1365L1148 1017L1050 1017Q1028 1103 1006.5 1153Q985 1203 961 1229Q937 1255 909.5 1266Q882 1277 827 1277L700 1277L700 253Q700 194 706.5 159Q713 124 726.5 103.5Q740 83 763 71.5Q786 60 835 49L835 0L378 0L378 49Q408 56 431 64Q454 72 468.5 83.5Q483 95 492.5 113Q502 131 507.5 162Q513 193 513 253L513 1277L387 1277Q340 1277 309.5 1268Q279 1259 253 1230.5Q227 1202 205.5 1149.5Q184 1097 165 1017L66 1017Z" />
+            </group>
+            <group android:translateX="1828.4" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M1125 472Q1125 363 1105 284Q1086 209 1048 151Q1013 99 961 62.5Q909 26 835 5Q761 -16 661 -16Q540 -16 453.5 11Q367 38 310.5 99.5Q254 161 229 244.5Q204 328 204 457L204 1115Q204 1193 199 1220.5Q194 1248 184.5 1264Q175 1280 157 1291.5Q139 1303 90 1316L90 1365L510 1365L510 1316Q454 1302 432 1284.5Q410 1267 402 1232Q394 1197 394 1115L394 407Q394 310 414.5 244Q435 178 472 141.5Q509 105 560 88.5Q611 72 687 72Q757 72 810 96.5Q863 121 898.5 171Q934 221 947 294Q960 367 960 490L960 1115Q960 1202 951.5 1234Q943 1266 923.5 1283Q904 1300 843 1316L843 1365L1242 1365L1242 1316Q1184 1301 1162.5 1283Q1141 1265 1133 1231Q1125 1197 1125 1115Z" />
+            </group>
+            <group android:translateX="3769.8" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M120 0L120 49Q166 61 186 72Q206 83 217 100Q228 117 233 149Q238 181 238 250L238 1115Q238 1185 233 1216.5Q228 1248 216.5 1265Q205 1282 186 1292.5Q167 1303 120 1316L120 1365L558 1365Q747 1365 867.5 1323.5Q988 1282 1071 1201Q1154 1120 1195 999.5Q1236 879 1236 712Q1236 543 1197.5 414.5Q1159 286 1085 199Q1021 123 928 74Q851 34 750 17Q649 0 482 0ZM425 93Q465 89 543 89Q627 89 693 103Q759 117 813 147Q867 177 910 230.5Q953 284 980 353.5Q1007 423 1019.5 508Q1032 593 1032 694Q1032 897 973.5 1027.5Q915 1158 808.5 1218Q702 1278 554 1278Q486 1278 425 1274Z" />
+            </group>
+            <group android:translateX="5739.2" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M426 250Q426 183 430.5 152Q435 121 445.5 103Q456 85 476.5 73Q497 61 543 49L543 0L121 0L121 49Q183 65 204 84.5Q225 104 231.5 140Q238 176 238 250L238 1115Q238 1184 233 1215.5Q228 1247 216.5 1264.5Q205 1282 186 1292.5Q167 1303 121 1316L121 1365L543 1365L543 1316Q499 1305 479.5 1294Q460 1283 448.5 1266.5Q437 1250 431.5 1217Q426 1184 426 1115Z" />
+            </group>
+            <group android:translateX="7017.6" android:translateY="0">
+                <path android:fillColor="#FFFEFEFF" android:pathData="M654 -16Q534 -16 435.5 23.5Q337 63 266.5 146.5Q196 230 157.5 360Q119 490 119 671Q119 894 187 1054Q255 1214 381.5 1297.5Q508 1381 675 1381Q853 1381 974.5 1302.5Q1096 1224 1157.5 1071.5Q1219 919 1219 700Q1219 466 1149 305Q1079 144 951.5 64Q824 -16 654 -16ZM325 699Q325 392 414.5 232Q504 72 676 72Q785 72 861 141.5Q937 211 975 345Q1013 479 1013 658Q1013 876 968.5 1019.5Q924 1163 847 1228Q770 1293 668 1293Q578 1293 513.5 1251Q449 1209 406.5 1131.5Q364 1054 344.5 944Q325 834 325 699Z" />
+            </group>
+        </group>
+    </group>
+</vector>

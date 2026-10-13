@@ -74,11 +74,20 @@ class NikonDriver(
         log.log("Nikon live view on")
     }
 
+    /** Live-view coordinate space for ChangeAfArea, read from the frame header. */
+    private var liveHeader: NikonLiveHeader? = null
+    private var headerLogged = false
+
     override fun liveViewFrame(): ByteArray? {
         val r = session.transaction(Ptp.OP_NIKON_GET_LIVE_VIEW_IMG, timeoutMs = 3000)
         return when {
             r.ok -> {
                 liveRestarts = 0
+                NikonLiveHeader.parse(r.data)?.let { liveHeader = it }
+                if (!headerLogged) {
+                    headerLogged = true
+                    log.log("Nikon live view header: ${liveHeader ?: "not recognised"} (${r.data.size} bytes)")
+                }
                 JpegExtractor.firstJpeg(r.data)
             }
             r.code == Ptp.RC_DEVICE_BUSY -> null
@@ -102,6 +111,20 @@ class NikonDriver(
         val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_AF_DRIVE) }
         if (!r.ok) throw PtpException("Autofocus failed: ${Ptp.responseName(r.code)}", r.code)
         waitReady()
+    }
+
+    override fun focusAt(u: Float, v: Float): FocusResult {
+        val h = liveHeader
+        if (h != null) {
+            val x = (u.coerceIn(0f, 1f) * h.wholeWidth).toLong()
+            val y = (v.coerceIn(0f, 1f) * h.wholeHeight).toLong()
+            val r = session.retryBusy { session.transaction(Ptp.OP_NIKON_CHANGE_AF_AREA, longArrayOf(x, y)) }
+            log.log("Nikon AF point → $x,$y of ${h.wholeWidth}x${h.wholeHeight}: ${Ptp.responseName(r.code)}")
+        } else {
+            log.log("Nikon AF point not moved: no live-view header yet")
+        }
+        autofocus()
+        return FocusResult.Locked
     }
 
     override fun pollVendorEvents(): List<PtpEvent> {
@@ -134,6 +157,27 @@ class NikonDriver(
         if (r.ok && r.data.size > 1000) {
             log.log("Got small NEF preview for ${info.filename} (${r.data.size / 1024} KB)")
             listener.onFile(DownloadedFile(info, r.data, isFullFile = false))
+        }
+    }
+}
+
+/**
+ * Start of a Nikon live-view object (big-endian): JPEG size, then the "whole" area that
+ * ChangeAfArea coordinates refer to, then the displayed area and the current AF area.
+ */
+data class NikonLiveHeader(
+    val jpegWidth: Int, val jpegHeight: Int,
+    val wholeWidth: Int, val wholeHeight: Int,
+    val afCenterX: Int, val afCenterY: Int,
+) {
+    companion object {
+        fun parse(d: ByteArray): NikonLiveHeader? {
+            if (d.size < 24 || (d[0].toInt() == -1 && d[1].toInt() == -40)) return null // starts with JPEG: no header
+            fun be(i: Int) = ((d[i].toInt() and 0xFF) shl 8) or (d[i + 1].toInt() and 0xFF)
+            val h = NikonLiveHeader(be(0), be(2), be(4), be(6), be(20), be(22))
+            val sane = h.jpegWidth in 160..4000 && h.jpegHeight in 120..4000 &&
+                h.wholeWidth in h.jpegWidth..20000 && h.wholeHeight in h.jpegHeight..20000
+            return h.takeIf { sane }
         }
     }
 }

@@ -33,6 +33,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.mutableFloatStateOf
+import studio.miroir.tether.R
+import studio.miroir.tether.tether.RotationLock
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -72,6 +78,8 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         val liveFrame by vm.liveFrame.collectAsStateWithLifecycle()
         val liveHistogram by vm.liveHistogram.collectAsStateWithLifecycle()
         val liveSupported by vm.liveSupported.collectAsStateWithLifecycle()
+        val afMark by vm.afMark.collectAsStateWithLifecycle()
+        val rotation by vm.rotation.collectAsStateWithLifecycle()
         val context = androidx.compose.ui.platform.LocalContext.current
 
         var showGrid by rememberSaveable { mutableStateOf(false) }
@@ -80,6 +88,20 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         var bgIndex by rememberSaveable { mutableIntStateOf(1) }
         var crop by rememberSaveable { mutableStateOf(CropRatio.Off) }
         var clientMode by rememberSaveable { mutableStateOf(false) }
+        var showStrip by rememberSaveable { mutableStateOf(true) }
+        var cropU by rememberSaveable { mutableFloatStateOf(0.5f) }
+        var cropV by rememberSaveable { mutableFloatStateOf(0.5f) }
+        val cropCenter = Offset(cropU, cropV)
+        val setCropCenter: (Offset) -> Unit = { cropU = it.x; cropV = it.y }
+
+        // Rotation lock: AUTO follows the tablet, LAND/PORT pin the layout (e.g. on a stand).
+        LaunchedEffect(rotation) {
+            (context as? android.app.Activity)?.requestedOrientation = when (rotation) {
+                RotationLock.Auto -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+                RotationLock.Landscape -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                RotationLock.Portrait -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            }
+        }
 
         val visibleShots = shots.filter { filter.matches(it) }
         val selected = shots.firstOrNull { it.id == selectedId }
@@ -101,10 +123,14 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
             Box(m) {
                 val a = analysis
                 when {
-                    live -> LiveViewPane(liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize(), crop)
+                    live -> LiveViewPane(
+                        liveFrame, C.ViewerBackgrounds[bgIndex], showGrid, Modifier.fillMaxSize(), crop,
+                        cropCenter = cropCenter, onCropCenter = setCropCenter, afMark = afMark, onFocusAt = vm::focusAt,
+                    )
                     a != null -> Viewer(
                         a, C.ViewerBackgrounds[bgIndex], showClipping, showGrid, tool, loupe, neutral,
                         onTap = vm::onImageTap, modifier = Modifier.fillMaxSize(), crop = crop,
+                        cropCenter = cropCenter, onCropCenter = setCropCenter,
                     )
                     else -> EmptyState(
                         connected = connected, model = status.model, error = status.state == LinkState.Error,
@@ -129,7 +155,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                 if (live) transfer?.let { t ->
                     Pill(
                         "Receiving ${t.filename} · ${(t.fraction * 100).toInt()}% — live view resumes after",
-                        Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp), color = C.Gold,
+                        Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp), color = C.Accent,
                     )
                 }
                 if (!live && shots.isNotEmpty()) {
@@ -178,7 +204,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
         if (clientMode) {
             ClientView(
                 analysis = analysis, selected = selected, index = shots.indexOfFirst { it.id == selectedId },
-                total = shots.size, live = live, liveFrame = liveFrame, crop = crop,
+                total = shots.size, live = live, liveFrame = liveFrame, crop = crop, cropCenter = cropCenter,
                 onPick = { selected?.let { vm.togglePick(it.id) } },
                 onPrev = { vm.selectRelative(-1) }, onNext = { vm.selectRelative(1) },
                 onExit = { clientMode = false },
@@ -192,6 +218,8 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                         status, onConnect = onConnectRequest, onDisconnect = vm::disconnect,
                         onGuide = { showGuide = true }, onLog = { showLog = true },
                         onClient = { clientMode = true },
+                        rotation = rotation, onRotation = vm::cycleRotation,
+                        showStrip = showStrip, onStrip = { showStrip = !showStrip },
                     )
                     if (wide) {
                         Row(Modifier.weight(1f)) {
@@ -217,7 +245,7 @@ fun TetherApp(vm: TetherViewModel, onConnectRequest: () -> Unit) {
                         }
                     }
                     // The filmstrip appears with the first shot, so the image gets the space until then.
-                    if (shots.isNotEmpty()) {
+                    if (shots.isNotEmpty() && showStrip) {
                         FilterBar(shots, filter, { vm.filter.value = it }, vm::exportPicks, shareList)
                         Filmstrip(visibleShots, selectedId, { id ->
                             // Tapping a shot leaves live view so you can review it.
@@ -247,17 +275,27 @@ private fun TopBar(
     onGuide: () -> Unit,
     onLog: () -> Unit,
     onClient: () -> Unit,
+    rotation: RotationLock,
+    onRotation: () -> Unit,
+    showStrip: Boolean,
+    onStrip: () -> Unit,
 ) {
     Row(
         Modifier.fillMaxWidth().height(60.dp).background(C.Ink).padding(horizontal = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("MIROIR", color = C.Gold, fontSize = 19.sp, letterSpacing = 5.sp, fontWeight = FontWeight.Light)
-        Spacer(Modifier.width(10.dp))
+        Image(painterResource(R.drawable.miroir_logo), contentDescription = "MIROIR Studio", modifier = Modifier.height(34.dp))
+        Spacer(Modifier.width(12.dp))
         Text("TETHER", style = T.Label.copy(letterSpacing = 3.sp))
         Spacer(Modifier.weight(1f))
         StatusChip(status, onConnect, onDisconnect)
         Spacer(Modifier.width(10.dp))
+        Box(contentAlignment = Alignment.BottomCenter) {
+            IconButton(Glyph.Rotate, onRotation, size = 40.dp, active = rotation != RotationLock.Auto)
+            Text(rotation.label, style = T.Label.copy(fontSize = 7.sp, letterSpacing = 1.sp))
+        }
+        // Hide the filmstrip for a bigger image while shooting.
+        IconButton(Glyph.Strip, onStrip, size = 40.dp, active = !showStrip)
         IconButton(Glyph.Present, onClient, size = 40.dp)
         IconButton(Glyph.Info, onGuide, size = 40.dp)
         IconButton(Glyph.Log, onLog, size = 40.dp)
@@ -290,7 +328,7 @@ private fun ToolRail(
     ) {
         if (live) {
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(C.Gold).clickable(onClick = onAutofocus),
+                Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(C.Accent).clickable(onClick = onAutofocus),
                 contentAlignment = Alignment.Center,
             ) { Text("AF", style = T.Body.copy(color = C.Ink, fontWeight = FontWeight.Bold)) }
         } else {
@@ -302,7 +340,7 @@ private fun ToolRail(
         // Tap to cycle 4:5 → 1:1 → 9:16 → 16:9 → off.
         Box(contentAlignment = Alignment.BottomCenter) {
             IconButton(Glyph.Crop, onCrop, active = crop != CropRatio.Off)
-            if (crop != CropRatio.Off) Text(crop.label, style = T.Label.copy(fontSize = 8.sp, color = C.Gold))
+            if (crop != CropRatio.Off) Text(crop.label, style = T.Label.copy(fontSize = 8.sp, color = C.Accent))
         }
         Box(contentAlignment = Alignment.BottomCenter) {
             IconButton(Glyph.Background, onBackground)
@@ -330,7 +368,7 @@ private fun ToastPill(text: String, error: Boolean, modifier: Modifier = Modifie
             .border(1.dp, C.Line, RoundedCornerShape(12.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(4.dp).height(44.dp).background(if (error) C.Bad else C.Gold))
+        Box(Modifier.width(4.dp).height(44.dp).background(if (error) C.Bad else C.Accent))
         Text(text, style = T.Body.copy(fontSize = 13.sp), modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
     }
 }
@@ -363,7 +401,7 @@ private fun EmptyState(
                     Text(message, color = C.Bad, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 14.dp))
                 }
                 Row(Modifier.padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = onConnect, colors = ButtonDefaults.buttonColors(containerColor = C.Gold, contentColor = C.Ink)) {
+                    Button(onClick = onConnect, colors = ButtonDefaults.buttonColors(containerColor = C.Accent, contentColor = C.Ink)) {
                         Text("Connect")
                     }
                     OutlinedButton(onClick = onGuide) { Text("Camera setup guide", color = C.Cream) }

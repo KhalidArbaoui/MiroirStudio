@@ -29,7 +29,7 @@ import kotlin.math.sin
 /** The app's line-icon set, drawn on a 24-unit grid with one stroke weight. */
 enum class Glyph {
     ChevronLeft, ChevronRight, Clipping, Focus, Eyedropper, Grid, Background,
-    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy, Crop, Present,
+    Live, Info, Log, Plug, Unplug, Lock, Star, StarFilled, Heart, HeartFilled, Export, Close, Copy, Crop, Present, Strip, Rotate,
 }
 
 @Composable
@@ -46,12 +46,12 @@ fun IconButton(
     active: Boolean = false,
     enabled: Boolean = true,
     size: Dp = 44.dp,
-    tint: Color = if (active) C.Gold else C.Cream,
+    tint: Color = if (active) C.Accent else C.Cream,
 ) {
     Box(
         modifier.size(size).clip(RoundedCornerShape(10.dp))
-            .background(if (active) C.GoldDim else Color.Transparent)
-            .then(if (active) Modifier.border(1.dp, C.Gold.copy(alpha = 0.6f), RoundedCornerShape(10.dp)) else Modifier)
+            .background(if (active) C.AccentDim else Color.Transparent)
+            .then(if (active) Modifier.border(1.dp, C.Accent.copy(alpha = 0.6f), RoundedCornerShape(10.dp)) else Modifier)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -161,6 +161,18 @@ private fun DrawScope.drawGlyph(g: Glyph, c: Color) {
         Glyph.Close -> { line(6f, 6f, 18f, 18f); line(18f, 6f, 6f, 18f) }
         Glyph.Copy -> { rect(8f, 8f, 12f, 12f); path(16f to 5f, 16f to 4f, 4f to 4f, 4f to 16f, 5f to 16f) }
         Glyph.Crop -> { path(7f to 3f, 7f to 17f, 21f to 17f); path(3f to 7f, 17f to 7f, 17f to 21f) }
+        Glyph.Strip -> {
+            // Filmstrip: frame with a row of thumbnails along the bottom.
+            rect(3f, 5f, 18f, 14f, 1.5f)
+            line(3f, 9f, 21f, 9f); line(3f, 15f, 21f, 15f)
+            line(8f, 15f, 8f, 19f); line(13f, 15f, 13f, 19f); line(18f, 15f, 18f, 19f)
+        }
+        Glyph.Rotate -> {
+            // Tablet with turning arrows.
+            rect(7f, 3f, 10f, 18f)
+            path(3.5f to 9f, 4.2f to 6.8f, 6f to 5f); path(3f to 5.5f, 6f to 5f, 6.5f to 8f)
+            path(20.5f to 15f, 19.8f to 17.2f, 18f to 19f); path(21f to 18.5f, 18f to 19f, 17.5f to 16f)
+        }
         Glyph.Present -> {
             // Screen on a stand: show the client.
             rect(3f, 4f, 18f, 12f, 1.5f)

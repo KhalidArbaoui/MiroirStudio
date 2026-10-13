@@ -57,7 +57,7 @@ fun TetherBar(
             Text("No camera connected", style = T.Body.copy(color = C.Muted), modifier = Modifier.weight(1f).padding(start = 8.dp))
             Text(
                 "Connect", style = T.Body.copy(color = C.Ink),
-                modifier = Modifier.clip(RoundedCornerShape(50)).background(C.Gold).clickable(onClick = onConnect)
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(C.Accent).clickable(onClick = onConnect)
                     .padding(horizontal = 22.dp, vertical = 10.dp),
             )
             return@Row
@@ -70,10 +70,10 @@ fun TetherBar(
             val mode = settings.firstOrNull { it.id == SettingId.Mode }
             if (mode != null) {
                 Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).border(1.5.dp, C.Gold, RoundedCornerShape(10.dp)),
+                    Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).border(1.5.dp, C.Accent, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(mode.display, style = T.Value.copy(color = C.Gold))
+                    Text(mode.display, style = T.Value.copy(color = C.Accent))
                 }
                 Spacer(Modifier.width(10.dp))
             }
@@ -143,7 +143,7 @@ private fun StepArrow(glyph: Glyph, onClick: () -> Unit) {
 fun ShutterButton(enabled: Boolean, busy: Boolean = false, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier.size(64.dp).clip(CircleShape)
-            .border(3.dp, if (!enabled) C.Line else if (busy) C.Gold.copy(alpha = 0.4f) else C.Gold, CircleShape)
+            .border(3.dp, if (!enabled) C.Line else if (busy) C.Accent.copy(alpha = 0.4f) else C.Accent, CircleShape)
             .padding(6.dp).clip(CircleShape)
             .background(if (enabled) C.Cream else C.Raised)
             .clickable(enabled = enabled, onClick = onClick),
@@ -175,7 +175,7 @@ private fun ExposureMeter(ev: Float?) {
             if (ev != null) {
                 val clamped = ev.coerceIn(-3.3f, 3.3f)
                 val x = cx + clamped * stop
-                val color = if (kotlin.math.abs(ev) > 3f) C.Bad else C.Gold
+                val color = if (kotlin.math.abs(ev) > 3f) C.Bad else C.Accent
                 val tri = androidx.compose.ui.graphics.Path().apply {
                     moveTo(x, mid + 9.dp.toPx())
                     lineTo(x - 6.dp.toPx(), size.height)

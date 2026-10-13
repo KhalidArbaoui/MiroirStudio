@@ -88,14 +88,14 @@ fun GuideDialog(onDismiss: () -> Unit) {
                 .background(C.Panel, RoundedCornerShape(16.dp)).padding(24.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Setup & colour guide", color = C.Gold, fontSize = 24.sp, fontWeight = FontWeight.Light)
+            Text("Setup & colour guide", color = C.Accent, fontSize = 24.sp, fontWeight = FontWeight.Light)
             Spacer(Modifier.height(8.dp))
             for (s in guide) {
-                Text(s.title.uppercase(), color = C.Gold, fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 18.dp, bottom = 6.dp))
+                Text(s.title.uppercase(), color = C.Accent, fontSize = 12.sp, letterSpacing = 2.sp, modifier = Modifier.padding(top = 18.dp, bottom = 6.dp))
                 s.items.forEach { Text("•  $it", color = C.Cream, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 3.dp)) }
             }
             Spacer(Modifier.height(20.dp))
-            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = C.Gold, contentColor = C.Ink)) { Text("Got it") }
+            Button(onClick = onDismiss, colors = ButtonDefaults.buttonColors(containerColor = C.Accent, contentColor = C.Ink)) { Text("Got it") }
         }
     }
 }
@@ -105,7 +105,7 @@ fun LogDialog(text: String, sessionPath: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(Modifier.fillMaxSize().padding(24.dp).background(C.Panel, RoundedCornerShape(16.dp)).padding(20.dp)) {
-            Text("Connection log", color = C.Gold, fontSize = 22.sp, fontWeight = FontWeight.Light)
+            Text("Connection log", color = C.Accent, fontSize = 22.sp, fontWeight = FontWeight.Light)
             Text("Photos are saved in: $sessionPath", color = C.Muted, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
             Column(
                 Modifier.weight(1f).fillMaxWidth().background(C.Ink, RoundedCornerShape(8.dp)).padding(12.dp)
@@ -124,7 +124,7 @@ fun LogDialog(text: String, sessionPath: String, onDismiss: () -> Unit) {
                             .putExtra(Intent.EXTRA_TEXT, text)
                         context.startActivity(Intent.createChooser(send, "Share log"))
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = C.Gold, contentColor = C.Ink),
+                    colors = ButtonDefaults.buttonColors(containerColor = C.Accent, contentColor = C.Ink),
                 ) { Text("Share log") }
                 OutlinedButton(onClick = onDismiss) { Text("Close", color = C.Cream) }
             }

@@ -21,6 +21,9 @@ food and product shoots.
 | Pro UI: neutral greys, tether bar, tool rail, exposure meter | ✅ | ✅ |
 | Crop overlays 4:5 / 1:1 / 9:16 / 16:9 (tool rail, works in live view) | 🧪 | 🧪 |
 | Client view: full-screen photo + Approve button (screen icon, top bar) | 🧪 | 🧪 |
+| Build 15: movable crop (drag; double-tap re-centres), hide filmstrip, MIROIR logo, violet accent | 🧪 | 🧪 |
+| Build 15: rotation lock AUTO/LAND/PORT + portrait layout | 🧪 | 🧪 |
+| Build 15: tap-to-focus in live view (box: white → green / red) | 🧪 | 🧪 (point move unconfirmed) |
 
 ## Camera setup card (keep in the bag)
 
@@ -62,6 +65,11 @@ food and product shoots.
 4. **Own repository:** create `miroir-tether` in GitHub Desktop (File → New Repository → Publish, private),
    then move `tether/` there. Don't merge this branch into the website's `main`.
 5. Business: package "Live tethered shoot — approve every dish on set" as a premium offer.
+
+## Design preview
+
+Clickable replica of the app for reviewing UI changes before building:
+https://claude.ai/artifact/TJppPrCYMNb6hUkG9YEMhw — change the preview first, then port to the app.
 
 ## Smaller backlog
 

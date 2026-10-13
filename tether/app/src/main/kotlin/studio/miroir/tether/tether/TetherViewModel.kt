@@ -24,6 +24,7 @@ import studio.miroir.tether.camera.CameraSetting
 import studio.miroir.tether.camera.SettingId
 import studio.miroir.tether.camera.DownloadedFile
 import studio.miroir.tether.camera.DriverOptions
+import studio.miroir.tether.camera.FocusResult
 import studio.miroir.tether.image.JpegExtractor
 import studio.miroir.tether.image.NeutralSample
 import studio.miroir.tether.ptp.PtpEvent
@@ -82,6 +83,17 @@ data class Transfer(val filename: String, val done: Long, val total: Long) {
 
 enum class Tool { None, Loupe, WhiteBalance }
 
+enum class AfState { Busy, Locked, Done, Failed }
+
+/** Where the user last asked the camera to focus, in live-view fractions, and how it went. */
+data class AfMark(val u: Float, val v: Float, val state: AfState)
+
+enum class RotationLock(val label: String, val toast: String) {
+    Auto("AUTO", "Rotation follows the tablet"),
+    Landscape("LAND", "Locked to landscape"),
+    Portrait("PORT", "Locked to portrait"),
+}
+
 /** A short message for the top of the screen. Each instance is distinct so repeats re-show. */
 class Toast(val text: String, val error: Boolean)
 
@@ -128,7 +140,14 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
     val liveHistogram: StateFlow<studio.miroir.tether.image.Histogram?> = _liveHistogram
     private val _liveSupported = MutableStateFlow(false)
     val liveSupported: StateFlow<Boolean> = _liveSupported
-    private val afRequests = ConcurrentLinkedQueue<Unit>()
+    /** (u, v) to move the AF point there, or empty to focus at the current point. */
+    private val focusRequests = ConcurrentLinkedQueue<FloatArray>()
+    private val _afMark = MutableStateFlow<AfMark?>(null)
+    val afMark: StateFlow<AfMark?> = _afMark
+
+    val rotation = MutableStateFlow(
+        runCatching { RotationLock.valueOf(prefs.getString("rotation", null) ?: "Auto") }.getOrDefault(RotationLock.Auto),
+    )
 
     private val _loupe = MutableStateFlow<Bitmap?>(null)
     val loupe: StateFlow<Bitmap?> = _loupe
@@ -212,8 +231,18 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
                         }
                         lastSettings = 0L
                     }
-                    if (afRequests.poll() != null) {
-                        try { driver.autofocus() } catch (e: PtpException) { showToast(e.message ?: "Autofocus failed") }
+                    var focus = focusRequests.poll()
+                    if (focus != null) {
+                        // Only the latest tap matters.
+                        while (true) focus = focusRequests.poll() ?: break
+                        val req = focus!!
+                        try {
+                            val result = if (req.size == 2) driver.focusAt(req[0], req[1]) else { driver.autofocus(); FocusResult.Done }
+                            _afMark.update { it?.copy(state = if (result == FocusResult.Locked) AfState.Locked else AfState.Done) }
+                        } catch (e: PtpException) {
+                            _afMark.update { it?.copy(state = AfState.Failed) }
+                            showToast(e.message ?: "Couldn't focus — tap an edge, the label or a texture")
+                        }
                     }
 
                     // Live view: follow the toggle, then pull one frame per loop.
@@ -299,6 +328,7 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         } finally {
             running.set(false)
             liveViewWanted.value = false
+            _afMark.value = null
             _liveFrame.value = null
             _transfer.value = null
             transport?.close()
@@ -356,12 +386,35 @@ class TetherViewModel(app: Application) : AndroidViewModel(app), CameraListener 
         if (_status.value.state == LinkState.Connected) captureRequests.add(Unit)
     }
 
+    private var focusHintShown = false
+
     fun toggleLiveView() {
         liveViewWanted.value = !liveViewWanted.value && _status.value.state == LinkState.Connected
+        if (liveViewWanted.value && !focusHintShown) {
+            focusHintShown = true
+            showToast("Tap the image to focus there · AF focuses again at the same spot", error = false)
+        }
     }
 
+    /** AF button: focus again at the last tapped point, or at the camera's own point. */
     fun autofocus() {
-        if (_status.value.state == LinkState.Connected) afRequests.add(Unit)
+        if (_status.value.state != LinkState.Connected) return
+        val m = _afMark.value
+        if (m != null) focusAt(m.u, m.v) else focusRequests.add(FloatArray(0))
+    }
+
+    /** Tap on live view at (u, v): move the AF point there and focus. */
+    fun focusAt(u: Float, v: Float) {
+        if (_status.value.state != LinkState.Connected) return
+        _afMark.value = AfMark(u, v, AfState.Busy)
+        focusRequests.add(floatArrayOf(u, v))
+    }
+
+    fun cycleRotation() {
+        val next = RotationLock.entries[(rotation.value.ordinal + 1) % RotationLock.entries.size]
+        rotation.value = next
+        prefs.edit().putString("rotation", next.name).apply()
+        showToast(next.toast, error = false)
     }
 
     private fun liveHistogram(bmp: Bitmap): studio.miroir.tether.image.Histogram {

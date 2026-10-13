@@ -10,7 +10,8 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Neutral greys like Lightroom / Capture One: a tinted interface shifts how colour in the
- * photo is perceived. MIROIR gold is used only as the accent (selection, active, shutter).
+ * photo is perceived. A soft violet is used only as the accent (selection, active, shutter);
+ * the brand itself is the black-and-white MIROIR Studio logo.
  */
 object C {
     val Ink = Color(0xFF0E0E0F)
@@ -21,8 +22,8 @@ object C {
     val Cream = Color(0xFFE7E7E7)
     val Muted = Color(0xFF8B8B90)
     val Faint = Color(0xFF5C5C61)
-    val Gold = Color(0xFFE6C891)
-    val GoldDim = Color(0x33E6C891)
+    val Accent = Color(0xFFA98BFF)
+    val AccentDim = Color(0x33A98BFF)
     val Ok = Color(0xFF5BD18B)
     val Warn = Color(0xFFFFB547)
     val Bad = Color(0xFFFF5A4E)
@@ -48,14 +49,14 @@ object T {
     val Value = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, color = C.Cream, fontFeatureSettings = TABULAR)
 
     /** Screen titles. */
-    val Title = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Light, color = C.Gold)
+    val Title = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.Light, color = C.Accent)
 }
 
 @Composable
 fun MiroirTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = C.Gold,
+            primary = C.Accent,
             onPrimary = C.Ink,
             background = C.Ink,
             surface = C.Panel,
